@@ -1,0 +1,51 @@
+<div class="page">
+  <mat-card>
+    <mat-card-title>Pálinkák</mat-card-title>
+
+    <mat-card-content>
+      <div class="actions">
+        <a mat-flat-button color="primary" routerLink="/palinkas/new">Új tétel</a>
+      </div>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+      <div class="loading" *ngIf="loading">Betöltés...</div>
+
+      <table mat-table [dataSource]="items" *ngIf="!loading">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Név</th>
+          <td mat-cell *matCellDef="let p">{{ p.name }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="fruitType">
+          <th mat-header-cell *matHeaderCellDef>Gyümölcs</th>
+          <td mat-cell *matCellDef="let p">{{ p.fruitType }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="abvPercent">
+          <th mat-header-cell *matHeaderCellDef>%</th>
+          <td mat-cell *matCellDef="let p">{{ p.abvPercent }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="volumeLiters">
+          <th mat-header-cell *matHeaderCellDef>Liter</th>
+          <td mat-cell *matCellDef="let p">{{ p.volumeLiters }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="distillationStyle">
+          <th mat-header-cell *matHeaderCellDef>Főzés</th>
+          <td mat-cell *matCellDef="let p">{{ p.distillationStyle }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="madeDate">
+          <th mat-header-cell *matHeaderCellDef>Készült</th>
+          <td mat-cell *matCellDef="let p">{{ p.madeDate ? (p.madeDate | date: 'yyyy-MM-dd') : '-' }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+
+      <div class="empty" *ngIf="!loading && items.length === 0">Nincs még felvitt tétel.</div>
+    </mat-card-content>
+  </mat-card>
+</div>

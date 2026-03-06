@@ -1,0 +1,68 @@
+<div class="page">
+  <mat-card>
+    <mat-card-title>Új pálinka tétel</mat-card-title>
+
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+        <mat-form-field appearance="outline">
+          <mat-label>Név</mat-label>
+          <input matInput formControlName="name" />
+          <mat-error *ngIf="form.controls.name.touched && form.controls.name.invalid">
+            Kötelező (min 2 karakter).
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Gyümölcs</mat-label>
+          <input matInput formControlName="fruitType" />
+          <mat-error *ngIf="form.controls.fruitType.touched && form.controls.fruitType.invalid">
+            Kötelező.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Alkoholfok (%)</mat-label>
+          <input matInput type="number" formControlName="abvPercent" />
+          <mat-error *ngIf="form.controls.abvPercent.touched && form.controls.abvPercent.invalid">
+            0 és 100 közötti szám.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Mennyiség (liter)</mat-label>
+          <input matInput type="number" formControlName="volumeLiters" />
+          <mat-error *ngIf="form.controls.volumeLiters.touched && form.controls.volumeLiters.invalid">
+            0-nál nagyobb vagy egyenlő szám.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Főzés stílus</mat-label>
+          <input matInput formControlName="distillationStyle" />
+          <mat-error *ngIf="form.controls.distillationStyle.touched && form.controls.distillationStyle.invalid">
+            Kötelező.
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Készítés dátuma (opcionális)</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="madeDate" />
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Megjegyzés (opcionális)</mat-label>
+          <textarea matInput rows="3" formControlName="notes"></textarea>
+        </mat-form-field>
+
+        <div class="error" *ngIf="error">{{ error }}</div>
+
+        <div class="buttons">
+          <button mat-button type="button" routerLink="/palinkas" [disabled]="loading">Mégse</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading">Mentés</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -1,0 +1,24 @@
+.page {
+  padding: 16px;
+}
+
+mat-card {
+  margin: 0 auto;
+  max-width: 720px;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.error {
+  margin: 8px 0;
+}
