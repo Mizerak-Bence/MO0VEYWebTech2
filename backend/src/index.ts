@@ -3,7 +3,9 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { config } from './config';
 import { authRouter } from './routes/auth';
+import { chatsRouter } from './routes/chats';
 import { palinkasRouter } from './routes/palinkas';
+import { ensureSystemAdmin } from './services/system-admin';
 
 const app = express();
 
@@ -17,6 +19,7 @@ app.use(express.json());
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRouter);
+app.use('/api/chats', chatsRouter);
 app.use('/api/palinkas', palinkasRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -27,6 +30,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 const start = async () => {
   await mongoose.connect(config.mongoUri);
+  await ensureSystemAdmin();
   app.listen(config.port, () => {
     // eslint-disable-next-line no-console
     console.log(`API listening on http://localhost:${config.port}`);

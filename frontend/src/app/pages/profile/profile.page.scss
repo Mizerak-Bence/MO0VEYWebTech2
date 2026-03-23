@@ -1,0 +1,146 @@
+.page {
+  min-height: 100dvh;
+  padding: 20px;
+  background: linear-gradient(180deg, #f8f3ea 0%, #f4eee3 100%);
+  display: grid;
+  gap: 16px;
+}
+
+mat-card {
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(62, 33, 11, 0.08);
+}
+
+.system-admin-note {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff3d9;
+  color: #6b4b22;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: #7b6b5a;
+  margin-bottom: 6px;
+}
+
+.hint {
+  color: #7b6b5a;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #2d1b0f;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-form {
+  margin-top: 20px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.buttons-left {
+  justify-content: flex-start;
+}
+
+.error {
+  color: #a32020;
+}
+
+.success {
+  color: #1b6b34;
+}
+
+.password-hint {
+  margin-bottom: 8px;
+}
+
+.password-info-box {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f7efe1;
+  border: 1px solid rgba(140, 82, 30, 0.14);
+}
+
+.password-info-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #5c2f0b;
+  margin-bottom: 6px;
+}
+
+.password-steps {
+  display: grid;
+  gap: 4px;
+  color: #6b5c4d;
+  font-size: 0.88rem;
+}
+
+.password-status {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.password-status-waiting {
+  background: #fff3d9;
+  color: #6b4b22;
+}
+
+.password-status-ready {
+  background: #e7f6eb;
+  color: #1b6b34;
+}
+
+.password-status-disabled {
+  background: #f3e7e0;
+  color: #6a3d1f;
+}
+
+.password-verify-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+.verify-button {
+  min-width: 260px;
+}
+
+.verification-status {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .password-verify-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

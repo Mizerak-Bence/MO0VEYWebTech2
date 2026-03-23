@@ -1,0 +1,112 @@
+<div class="page">
+  <mat-card class="profile-card">
+    <mat-card-title>Profil</mat-card-title>
+    <mat-card-content *ngIf="user() as currentUser">
+      <div class="system-admin-note" *ngIf="isSystemAdmin()">
+        Ez egy beépített rendszer admin fiók. A felhasználónév, a kijelzett név és a jelszó fixen a kódban van definiálva.
+      </div>
+
+      <div class="profile-grid">
+        <div>
+          <div class="label">Felhasználónév</div>
+          <div class="value">{{ currentUser.username }}</div>
+          <div class="hint">Ezzel jelentkezel be.</div>
+        </div>
+        <div>
+          <div class="label">Szerepkör</div>
+          <mat-chip-set>
+            <mat-chip>{{ roleLabel() }}</mat-chip>
+          </mat-chip-set>
+        </div>
+        <div>
+          <div class="label">Létrehozva</div>
+          <div class="value">{{ currentUser.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+        </div>
+      </div>
+
+      <form [formGroup]="profileForm" (ngSubmit)="submitProfile()" class="form profile-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Kijelzett név</mat-label>
+          <input matInput formControlName="displayName" autocomplete="name" [disabled]="isSystemAdmin()" />
+          <mat-error *ngIf="profileForm.controls.displayName.touched && profileForm.controls.displayName.invalid">
+            A kijelzett név legalább 2 karakter legyen.
+          </mat-error>
+        </mat-form-field>
+
+        <div class="buttons buttons-left">
+          <button mat-flat-button color="primary" type="submit" [disabled]="profileSaving() || isSystemAdmin()">Kijelzett név mentése</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="password-card">
+    <mat-card-title>Jelszó módosítása</mat-card-title>
+    <mat-card-content>
+      <div class="password-info-box">
+        <div class="password-info-title">Hogyan működik?</div>
+        <div class="hint password-hint">
+          A rendszer a jelenlegi jelszót biztonságosan hash-elve tárolja, ezért azt nem lehet sima szövegként visszanézni.
+        </div>
+        <div class="password-steps">
+          <div>1. Írd be a jelenlegi jelszót.</div>
+          <div>2. Kattints a Jelenlegi jelszó ellenőrzése gombra.</div>
+          <div>3. Csak sikeres ellenőrzés után nyílnak meg az új jelszó mezők.</div>
+        </div>
+      </div>
+
+      <div class="password-status" [class.password-status-ready]="currentPasswordVerified()" [class.password-status-waiting]="!currentPasswordVerified() && !isSystemAdmin()" [class.password-status-disabled]="isSystemAdmin()">
+        {{ isSystemAdmin() ? 'A rendszer admin jelszava fixen a kódban van beállítva, ezért itt nem ellenőrizhető és nem módosítható.' : currentPasswordVerified() ? 'A jelenlegi jelszó ellenőrizve. Most már megadhatsz új jelszót.' : 'Az új jelszó megadása előtt ellenőrizni kell a jelenlegi jelszót.' }}
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submitPasswordChange()" class="form">
+        <mat-form-field appearance="outline">
+          <mat-label>Jelenlegi jelszó</mat-label>
+          <input matInput [type]="showCurrentPassword() ? 'text' : 'password'" formControlName="currentPassword" autocomplete="current-password" [disabled]="isSystemAdmin()" />
+          <button mat-icon-button matSuffix type="button" (click)="toggleCurrentPassword()" [attr.aria-label]="showCurrentPassword() ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+            <mat-icon>{{ showCurrentPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-hint>Alapból rejtve jelenik meg. A szem ikon csak az általad ide beírt karaktereket mutatja.</mat-hint>
+        </mat-form-field>
+
+        <div class="password-verify-row">
+          <button mat-stroked-button type="button" class="verify-button" (click)="verifyCurrentPassword()" [disabled]="verifyingPassword() || isSystemAdmin()">
+            {{ isSystemAdmin() ? 'Jelszó ellenőrzése nem elérhető' : verifyingPassword() ? 'Ellenőrzés...' : 'Jelenlegi jelszó ellenőrzése' }}
+          </button>
+          <div class="hint verification-status" *ngIf="passwordVerificationMessage() && !isSystemAdmin()">
+            {{ passwordVerificationMessage() }}
+          </div>
+          <div class="hint verification-status" *ngIf="isSystemAdmin()">
+            Ennél a fióknál a beépített fix jelszó miatt ez a művelet le van tiltva.
+          </div>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Új jelszó</mat-label>
+          <input matInput [type]="showNewPassword() ? 'text' : 'password'" formControlName="newPassword" autocomplete="new-password" [disabled]="isSystemAdmin() || !currentPasswordVerified()" />
+          <button mat-icon-button matSuffix type="button" (click)="toggleNewPassword()" [disabled]="isSystemAdmin() || !currentPasswordVerified()" [attr.aria-label]="showNewPassword() ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+            <mat-icon>{{ showNewPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-hint *ngIf="!currentPasswordVerified() && !isSystemAdmin()">Előbb ellenőrizd a jelenlegi jelszót.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Új jelszó újra</mat-label>
+          <input matInput [type]="showConfirmPassword() ? 'text' : 'password'" formControlName="confirmNewPassword" autocomplete="new-password" [disabled]="isSystemAdmin() || !currentPasswordVerified()" />
+          <button mat-icon-button matSuffix type="button" (click)="toggleConfirmPassword()" [disabled]="isSystemAdmin() || !currentPasswordVerified()" [attr.aria-label]="showConfirmPassword() ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+            <mat-icon>{{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-hint *ngIf="!currentPasswordVerified() && !isSystemAdmin()">Az ismétlés mező is csak ellenőrzés után használható.</mat-hint>
+        </mat-form-field>
+
+        <div class="error" *ngIf="error()">{{ error() }}</div>
+        <div class="success" *ngIf="success()">{{ success() }}</div>
+
+        <div class="buttons">
+          <a mat-button routerLink="/palinkas">Vissza a listához</a>
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading() || isSystemAdmin() || !currentPasswordVerified()">Jelszó mentése</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

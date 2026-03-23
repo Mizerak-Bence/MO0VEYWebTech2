@@ -1,0 +1,23 @@
+[  ] 2-3dl vegyes 50° 25/10/18
+[  ] 0.5l vegyes 48° 24/11/14
+[  ] 4dl~ vegyes 48° 25/1018
+[  ] 4,5dl~ elene szilv 48° 24/11/07
+[  ] 0,5l '?' (Kék kupak)
+[  ] 0,5l szilva 48° 24/11/15
+[  ] 0,5l bor,som,őszib 48° 24/11/08
+[  ] 0,5l konkordi 47° 24/10/22
+[  ] 4dl~ birs 48° 25/12/11
+[  ] 4,5dl~ alma 48° 24/11/22
+[  ] 0,5l alma '?' (Sprite)
+[  ] 0,5l alma 48° 24/11/14
+[  ] 0,5l alma 48° 24/02/28
+[  ] 4,5dl~ alma,körte 48° 25/10/25
+[  ] 0,5l alma,birs 48° 25/02/28
+[  ] Szilva 25/09/26 47° 0,5l
+_____________________________
+
+[  ] Körte (23-24, 48°, (cappy(zold)))
+[  ] Szőlő/szilva (23-24, 48°, (ásványvizes(kék)))
+[  ] Körte, szilva (24/11/15 48°, 3dl(nestea(barackos(narancs)))
+[  ] Őszib,Szőlő (24/11/07 48°, 4,5dl~ (schweppes(narancs))
+- nincsen [v] Szilva 24/12/06 48°0,5l (mentes(pink))

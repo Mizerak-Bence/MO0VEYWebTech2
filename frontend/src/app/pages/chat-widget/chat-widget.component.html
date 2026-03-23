@@ -1,0 +1,86 @@
+<ng-container *ngIf="currentUser()">
+  <button
+    class="chat-bubble"
+    type="button"
+    mat-fab
+    color="primary"
+    [matBadge]="unreadCount()"
+    [matBadgeHidden]="unreadCount() === 0"
+    matBadgeColor="warn"
+    (click)="toggleWidget()"
+    aria-label="Beszélgetések megnyitása"
+  >
+    <mat-icon>{{ isOpen() ? 'close' : 'chat' }}</mat-icon>
+  </button>
+
+  <div class="chat-panel" *ngIf="isOpen()">
+    <div class="chat-header">
+      <div>
+        <div class="chat-title">Beszélgetések</div>
+        <div class="chat-subtitle">Foglalás és érdeklődés</div>
+      </div>
+      <button mat-icon-button type="button" (click)="toggleWidget()" aria-label="Chat bezárása">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="chat-body">
+      <div class="thread-list">
+        <div class="thread-empty" *ngIf="!loading() && threads().length === 0">Még nincs beszélgetés.</div>
+
+        <button
+          type="button"
+          class="thread-item"
+          *ngFor="let thread of threads()"
+          [class.thread-item-active]="selectedThread() && selectedThread()!.id === thread.id"
+          (click)="selectThread(thread.id)"
+        >
+          <div class="thread-item-title">{{ thread.palinka?.fruitType ?? 'Ismeretlen tétel' }}</div>
+          <div class="thread-item-meta">
+            {{ thread.isOwnerView ? thread.requester.displayName : thread.owner.displayName }}
+          </div>
+          <div class="thread-item-status" [class.thread-item-status-unread]="thread.unreadCount > 0">
+            {{ threadStatusLabel(thread) }}
+          </div>
+          <div class="thread-item-preview" *ngIf="thread.messages.length > 0">
+            {{ thread.messages[thread.messages.length - 1].text }}
+          </div>
+        </button>
+      </div>
+
+      <div class="chat-conversation" *ngIf="selectedThread() as thread; else emptyConversation">
+        <div class="conversation-title">
+          <div>{{ thread.palinka?.fruitType }} · {{ thread.palinka?.volumeLiters }} L</div>
+          <div class="conversation-owner">Tulajdonos: {{ thread.owner.displayName }}</div>
+        </div>
+
+        <div class="message-list">
+          <div class="message" *ngFor="let message of thread.messages" [class.message-own]="message.isOwnMessage">
+            <div class="message-author">{{ message.sender.displayName }}</div>
+            <div class="message-text">{{ message.text }}</div>
+            <div class="message-time">{{ message.createdAt | date: 'MM-dd HH:mm' }}</div>
+          </div>
+        </div>
+
+        <div class="message-compose">
+          <textarea
+            matInput
+            rows="2"
+            [ngModel]="draftMessage()"
+            (ngModelChange)="draftMessage.set($event)"
+            placeholder="Írj üzenetet..."
+          ></textarea>
+          <button mat-flat-button color="primary" type="button" (click)="sendMessage()" [disabled]="sending()">
+            Küldés
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyConversation>
+        <div class="chat-conversation chat-conversation-empty">Válassz ki egy beszélgetést.</div>
+      </ng-template>
+    </div>
+
+    <div class="chat-error" *ngIf="error()">{{ error() }}</div>
+  </div>
+</ng-container>

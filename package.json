@@ -1,0 +1,12 @@
+{
+  "name": "palinka-nyilvantarto-monorepo",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend start",
+    "dev:windows": "powershell -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "seed:import": "powershell -ExecutionPolicy Bypass -File ./scripts/seed-import.ps1"
+  }
+}
