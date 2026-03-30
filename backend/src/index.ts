@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -8,6 +10,8 @@ import { palinkasRouter } from './routes/palinkas';
 import { ensureSystemAdmin } from './services/system-admin';
 
 const app = express();
+const frontendDistPath = path.resolve(__dirname, '..', '..', 'frontend', 'dist', 'palinka-nyilvantarto', 'browser');
+const hasBuiltFrontend = fs.existsSync(frontendDistPath);
 
 app.use(
   cors({
@@ -22,6 +26,14 @@ app.use('/api/auth', authRouter);
 app.use('/api/chats', chatsRouter);
 app.use('/api/palinkas', palinkasRouter);
 
+if (hasBuiltFrontend) {
+  app.use(express.static(frontendDistPath));
+
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+}
+
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   // eslint-disable-next-line no-console
   console.error(err);
@@ -33,7 +45,11 @@ const start = async () => {
   await ensureSystemAdmin();
   app.listen(config.port, () => {
     // eslint-disable-next-line no-console
-    console.log(`API listening on http://localhost:${config.port}`);
+    console.log(
+      hasBuiltFrontend
+        ? `App listening on http://localhost:${config.port}`
+        : `API listening on http://localhost:${config.port}`
+    );
   });
 };
 

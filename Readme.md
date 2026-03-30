@@ -41,6 +41,38 @@ Windows alatt egy parancsos indítás:
 Frontend: `http://localhost:4200`
 API: `http://localhost:3001/api`
 
+### Hostolás / deploy
+
+A projekt most már egyetlen konténerből is futtatható:
+- a backend szolgálja ki az Angular buildet
+- az API ugyanazon a domainen a `/api` útvonalon érhető el
+
+Ehhez a gyökérben van egy [Dockerfile](Dockerfile).
+
+Szükséges környezeti változók hoszton:
+- `PORT` - pl. `3001` vagy amit a szolgáltató ad
+- `MONGO_URI` - külső MongoDB connection string
+- `JWT_SECRET` - saját titkos kulcs
+- opcionális: `SYSTEM_ADMIN_USERNAME`, `SYSTEM_ADMIN_PASSWORD`, `SYSTEM_ADMIN_DISPLAY_NAME`
+
+Példa Docker build és futtatás lokálisan:
+- `docker build -t palinka-app .`
+- `docker run -p 3001:3001 -e MONGO_URI="mongodb://host:27017/palinka" -e JWT_SECRET="eros-titok" palinka-app`
+
+Ezután az app a `http://localhost:3001` címen érhető el.
+
+Olyan hoszton érdemes deployolni, ami Docker imaget tud futtatni, például:
+- Render
+- Railway
+- Fly.io
+- Northflank
+
+Itt a deploy folyamat általában:
+1. repo feltöltése GitHubra
+2. új web service létrehozása Dockerfile alapján
+3. környezeti változók beállítása
+4. külső MongoDB összekötése
+
 ### Felhasználói fiókok
 
 - Regisztráció a frontendből: `http://localhost:4200/register`
