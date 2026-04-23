@@ -150,3 +150,9 @@ Csak teszt (nem ír DB-be):
 ### Megjegyzés
 - A repo `.gitignore` kizárja a tipikus nem feltöltendő fájlokat (pl. `node_modules`, build outputok, `.env`).
 - A `backend/.env` nincs git-ben, de a projekt alap dev futásához nem is szükséges.
+
+http://localhost:4200
+cd frontend
+npm run build
+cd ../backend
+npm start
