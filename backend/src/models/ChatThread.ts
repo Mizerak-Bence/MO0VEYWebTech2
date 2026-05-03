@@ -1,4 +1,5 @@
 import mongoose, { type InferSchemaType } from 'mongoose';
+import { CHAT_THREAD_RETENTION_SECONDS } from '../chat-retention';
 
 const chatMessageSchema = new mongoose.Schema(
   {
@@ -24,6 +25,7 @@ const chatThreadSchema = new mongoose.Schema(
 );
 
 chatThreadSchema.index({ palinkaId: 1, requesterId: 1 }, { unique: true });
+chatThreadSchema.index({ latestMessageAt: 1 }, { expireAfterSeconds: CHAT_THREAD_RETENTION_SECONDS });
 
 export type ChatThread = InferSchemaType<typeof chatThreadSchema>;
 

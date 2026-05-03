@@ -1,159 +1,211 @@
-<div class="page">
-  <mat-toolbar class="toolbar">
-    <div>
-      <div class="toolbar-title">Pálinka Nyilvántartó</div>
-      <div class="toolbar-subtitle">Készlet, tételek és gyors adminisztráció</div>
-    </div>
+<div class="page studio-surface">
+  <div class="page-shell studio-surface__shell">
+    <div class="page-noise studio-surface__noise"></div>
+    <div class="page-sheen studio-surface__sheen"></div>
 
-    <span class="toolbar-spacer"></span>
+    <div class="page-content studio-surface__content">
+      <mat-toolbar class="toolbar">
+        <div>
+          <div class="toolbar-title">Pálinka Nyilvántartó</div>
+          <div class="toolbar-subtitle">Készlet, tételek és gyors adminisztráció</div>
+        </div>
 
-    <div class="toolbar-user" *ngIf="currentUser() as user">
-      <div class="toolbar-user-name">{{ user.displayName }}</div>
-    </div>
+        <span class="toolbar-spacer"></span>
 
-    <button mat-button type="button" (click)="load()">
-      <mat-icon>refresh</mat-icon>
-      Frissítés
-    </button>
-    <a mat-button routerLink="/profile">
-      <mat-icon>person</mat-icon>
-      Profil
-    </a>
-    <button mat-button type="button" (click)="logout()">
-      <mat-icon>logout</mat-icon>
-      Kilépés
-    </button>
-  </mat-toolbar>
+        <div class="toolbar-user" *ngIf="currentUser() as user">
+          <div class="toolbar-user-name">{{ user.displayName }}</div>
+          <div class="toolbar-user-role">{{ user.role === 'admin' ? 'Rendszer admin' : 'Felhasználó' }}</div>
+        </div>
 
-  <div class="stats-grid">
-    <mat-card>
-      <div class="stat-label">Tételek</div>
-      <div class="stat-value">{{ filteredItems().length }}</div>
-    </mat-card>
-
-    <mat-card>
-      <div class="stat-label">Összes mennyiség</div>
-      <div class="stat-value">{{ formatVolume(totalVolume()) }} L</div>
-    </mat-card>
-
-    <mat-card>
-      <div class="stat-label">Átlag alkoholfok</div>
-      <div class="stat-value">{{ averageAbv() == null ? '-' : formatVolume(averageAbv()) + '%' }}</div>
-    </mat-card>
-
-    <mat-card>
-      <div class="stat-label">Gyümölcstípusok</div>
-      <div class="stat-value">{{ uniqueFruits() }}</div>
-    </mat-card>
-  </div>
-
-  <mat-card class="list-card">
-    <mat-card-title>Pálinkák</mat-card-title>
-
-    <mat-card-content>
-      <div class="view-toggle-row">
-        <mat-chip-set>
-          <mat-chip [highlighted]="viewMode() === 'prioritized'" (click)="setViewMode('prioritized')">
-            Saját tételek elöl, de minden látszik
-          </mat-chip>
-          <mat-chip [highlighted]="viewMode() === 'own'" (click)="setViewMode('own')">
-            Csak a saját tételeim
-          </mat-chip>
-        </mat-chip-set>
-      </div>
-
-      <div class="actions-row">
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Keresés gyümölcs, főzés, tulajdonos vagy megjegyzés szerint</mat-label>
-          <input matInput [value]="search()" (input)="setSearch($any($event.target).value)" />
-          <mat-icon matIconSuffix>search</mat-icon>
-        </mat-form-field>
-
-        <a mat-flat-button color="primary" routerLink="/palinkas/new">
-          <mat-icon>add</mat-icon>
-          Új tétel
+        <button mat-button type="button" (click)="load()">
+          <mat-icon>refresh</mat-icon>
+          Frissítés
+        </button>
+        <a mat-button routerLink="/profile">
+          <mat-icon>person</mat-icon>
+          Profil
         </a>
+        <button mat-button type="button" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          Kilépés
+        </button>
+      </mat-toolbar>
+
+      <section class="hero-panel studio-surface__hero">
+        <div class="hero-copy">
+          <div class="hero-kicker studio-surface__kicker">Belső irányítópult</div>
+          <h1 class="hero-title studio-surface__title">Pálinkák, érdeklődések és készlet egy térben</h1>
+          <p class="hero-text studio-surface__text">
+            Ugyanaz a meleg tónusú arculat, mint a belépésnél, csak széthúzva a napi munkára: keresés,
+            állapotkövetés és gyors műveletek egy középső shellben.
+          </p>
+        </div>
+
+        <div class="hero-side">
+          <div class="hero-side-card">
+            <div class="hero-side-label">Bejelentkezve</div>
+            <div class="hero-side-value">{{ currentUser()?.displayName ?? 'Ismeretlen felhasználó' }}</div>
+            <div class="hero-side-detail">{{ currentUser()?.role === 'admin' ? 'Teljes rendszer-hozzaferes' : 'Sajat tetelek es erdeklodesek kezelese' }}</div>
+          </div>
+
+          <div class="hero-side-card hero-side-card-accent">
+            <div class="hero-side-label">Aktiv nezet</div>
+            <div class="hero-side-value">{{ viewMode() === 'own' ? 'Sajat tetelek' : 'Teljes keszlet' }}</div>
+            <div class="hero-side-detail">{{ filteredItems().length }} tetel a jelenlegi szuresben</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <div class="stat-label">Tételek</div>
+          <div class="stat-value">{{ filteredItems().length }}</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Összes mennyiség</div>
+          <div class="stat-value">{{ formatVolume(totalVolume()) }} L</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Átlag alkoholfok</div>
+          <div class="stat-value">{{ averageAbv() == null ? '-' : formatVolume(averageAbv()) + '%' }}</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Gyümölcstípusok</div>
+          <div class="stat-value">{{ uniqueFruits() }}</div>
+        </mat-card>
       </div>
 
-      <div class="error" *ngIf="error()">{{ error() }}</div>
-      <div class="loading" *ngIf="loading()">Betöltés...</div>
+      <mat-card class="list-card">
+        <mat-card-content>
+          <div class="list-header">
+            <div>
+              <div class="section-kicker studio-surface__kicker">Készletlista</div>
+              <h2 class="section-title studio-surface__title">Pálinkák</h2>
+              <p class="section-text studio-surface__text">Szűrés, érdeklődők és módosítások egy nagyobb, letisztult munkafelületen.</p>
+            </div>
+          </div>
 
-      <div class="table-wrapper" *ngIf="!loading()">
-        <table mat-table [dataSource]="filteredItems()">
-        <ng-container matColumnDef="fruitType">
-          <th mat-header-cell *matHeaderCellDef>Gyümölcs</th>
-          <td mat-cell *matCellDef="let p">
-            <div class="cell-primary">{{ p.fruitType }}</div>
-            <div class="cell-secondary" *ngIf="p.notes">{{ p.notes }}</div>
-          </td>
-        </ng-container>
+          <div class="panel-toolbar">
+            <div class="view-toggle-row">
+              <mat-chip-set class="toggle-chip-set">
+                <mat-chip [highlighted]="viewMode() === 'prioritized'" (click)="setViewMode('prioritized')">
+                  Saját tételek elöl, de minden látszik
+                </mat-chip>
+                <mat-chip [highlighted]="viewMode() === 'own'" (click)="setViewMode('own')">
+                  Csak a saját tételeim
+                </mat-chip>
+              </mat-chip-set>
+            </div>
 
-        <ng-container matColumnDef="owner">
-          <th mat-header-cell *matHeaderCellDef>Felvitte</th>
-          <td mat-cell *matCellDef="let p">
-            <div class="cell-primary">{{ ownerLabel(p) }}</div>
-            <div class="cell-secondary" *ngIf="p.owner && !p.isOwnedByCurrentUser">&#64;{{ p.owner.username }}</div>
-          </td>
-        </ng-container>
+            <div class="actions-row">
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>Keresés gyümölcs, főzés, tulajdonos vagy megjegyzés szerint</mat-label>
+                <input matInput [value]="search()" (input)="setSearch($any($event.target).value)" />
+                <mat-icon matIconSuffix>search</mat-icon>
+              </mat-form-field>
 
-        <ng-container matColumnDef="containerCapacityLiters">
-          <th mat-header-cell *matHeaderCellDef>Tároló</th>
-          <td mat-cell *matCellDef="let p">{{ p.containerCapacityLiters ? formatVolume(p.containerCapacityLiters) + ' L' : '-' }}</td>
-        </ng-container>
+              <a mat-flat-button color="primary" routerLink="/palinkas/new">
+                <mat-icon>add</mat-icon>
+                Új tétel
+              </a>
+            </div>
+          </div>
 
-        <ng-container matColumnDef="abvPercent">
-          <th mat-header-cell *matHeaderCellDef>%</th>
-          <td mat-cell *matCellDef="let p">{{ formatAbv(p.abvPercent) }}</td>
-        </ng-container>
+          <div class="error-banner" *ngIf="error()">{{ error() }}</div>
+          <div class="loading-banner" *ngIf="loading()">Betöltés...</div>
 
-        <ng-container matColumnDef="volumeLiters">
-          <th mat-header-cell *matHeaderCellDef>Liter</th>
-          <td mat-cell *matCellDef="let p">
-            {{ formatVolume(p.volumeLiters) }}
-            <span class="cell-secondary" *ngIf="p.volumeMinLiters != null && p.volumeMaxLiters != null && p.volumeMinLiters !== p.volumeMaxLiters">
-              ({{ formatVolume(p.volumeMinLiters) }} - {{ formatVolume(p.volumeMaxLiters) }})
-            </span>
-          </td>
-        </ng-container>
+          <div class="table-wrapper" *ngIf="!loading()">
+            <table mat-table [dataSource]="filteredItems()">
+              <ng-container matColumnDef="fruitType">
+                <th mat-header-cell *matHeaderCellDef>Gyümölcs</th>
+                <td mat-cell *matCellDef="let p">
+                  <div class="cell-primary">{{ p.fruitType }}</div>
+                  <div class="cell-secondary" *ngIf="p.notes">{{ p.notes }}</div>
+                </td>
+              </ng-container>
 
-        <ng-container matColumnDef="distillationStyle">
-          <th mat-header-cell *matHeaderCellDef>Főzés</th>
-          <td mat-cell *matCellDef="let p">{{ p.distillationStyle }}</td>
-        </ng-container>
+              <ng-container matColumnDef="owner">
+                <th mat-header-cell *matHeaderCellDef>Felvitte</th>
+                <td mat-cell *matCellDef="let p">
+                  <div class="cell-primary">{{ ownerLabel(p) }}</div>
+                  <div class="cell-secondary" *ngIf="p.owner && !p.isOwnedByCurrentUser">&#64;{{ p.owner.username }}</div>
+                </td>
+              </ng-container>
 
-        <ng-container matColumnDef="reservation">
-          <th mat-header-cell *matHeaderCellDef>Érdeklődés</th>
-          <td mat-cell *matCellDef="let p">
-            <div class="cell-primary">{{ reservationLabel(p) }}</div>
-            <button mat-stroked-button type="button" class="reserve-button" *ngIf="canReserve(p)" (click)="openReservation(p)">
-              {{ p.currentUserHasConversation ? 'Chat megnyitása' : 'Lefoglalás / érdeklődés' }}
-            </button>
-          </td>
-        </ng-container>
+              <ng-container matColumnDef="containerCapacityLiters">
+                <th mat-header-cell *matHeaderCellDef>Tároló</th>
+                <td mat-cell *matCellDef="let p">{{ p.containerCapacityLiters ? formatVolume(p.containerCapacityLiters) + ' L' : '-' }}</td>
+              </ng-container>
 
-        <ng-container matColumnDef="madeDate">
-          <th mat-header-cell *matHeaderCellDef>Készült</th>
-          <td mat-cell *matCellDef="let p">{{ p.madeDate ? (p.madeDate | date: 'yyyy-MM-dd') : '-' }}</td>
-        </ng-container>
+              <ng-container matColumnDef="abvPercent">
+                <th mat-header-cell *matHeaderCellDef>%</th>
+                <td mat-cell *matCellDef="let p">{{ formatAbv(p.abvPercent) }}</td>
+              </ng-container>
 
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef>Műveletek</th>
-          <td mat-cell *matCellDef="let p" class="actions-cell">
-            <button mat-icon-button type="button" (click)="edit(p)" aria-label="Szerkesztés" [disabled]="!p.canManage">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button type="button" (click)="delete(p)" aria-label="Törlés" [disabled]="!p.canManage">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </td>
-        </ng-container>
+              <ng-container matColumnDef="volumeLiters">
+                <th mat-header-cell *matHeaderCellDef>Liter</th>
+                <td mat-cell *matCellDef="let p">
+                  {{ formatVolume(p.volumeLiters) }}
+                  <span class="cell-secondary" *ngIf="p.volumeMinLiters != null && p.volumeMaxLiters != null && p.volumeMinLiters !== p.volumeMaxLiters">
+                    ({{ formatVolume(p.volumeMinLiters) }} - {{ formatVolume(p.volumeMaxLiters) }})
+                  </span>
+                </td>
+              </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-        </table>
-      </div>
+              <ng-container matColumnDef="distillationStyle">
+                <th mat-header-cell *matHeaderCellDef>Főzés</th>
+                <td mat-cell *matCellDef="let p">{{ p.distillationStyle }}</td>
+              </ng-container>
 
-      <div class="empty" *ngIf="!loading() && filteredItems().length === 0">Nincs találat a jelenlegi szűrésre.</div>
-    </mat-card-content>
-  </mat-card>
+              <ng-container matColumnDef="reservation">
+                <th mat-header-cell *matHeaderCellDef>Érdeklődés</th>
+                <td mat-cell *matCellDef="let p">
+                  <div class="cell-primary">{{ reservationLabel(p) }}</div>
+                  <div class="interest-list" *ngIf="p.interestEntries?.length">
+                    <div class="interest-item" *ngFor="let interest of p.interestEntries">
+                      <div class="interest-name">{{ interest.requester.displayName }}</div>
+                      <div class="interest-meta">
+                        {{ interest.status === 'requested' ? 'Új érdeklődés' : 'Aktív beszélgetés' }} · törlés:
+                        {{ interest.expiresAt | date: 'MM-dd HH:mm' }}
+                      </div>
+                    </div>
+                  </div>
+                  <button mat-stroked-button type="button" class="reserve-button" *ngIf="canReserve(p)" (click)="openReservation(p)">
+                    {{ p.currentUserHasConversation ? 'Chat megnyitása' : 'Lefoglalás / érdeklődés' }}
+                  </button>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="madeDate">
+                <th mat-header-cell *matHeaderCellDef>Készült</th>
+                <td mat-cell *matCellDef="let p">{{ p.madeDate ? (p.madeDate | date: 'yyyy-MM-dd') : '-' }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Műveletek</th>
+                <td mat-cell *matCellDef="let p" class="actions-cell">
+                  <button mat-icon-button type="button" (click)="edit(p)" aria-label="Szerkesztés" [disabled]="!p.canManage">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button type="button" (click)="delete(p)" aria-label="Törlés" [disabled]="!p.canManage">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+            </table>
+          </div>
+
+          <div class="empty-state" *ngIf="!loading() && filteredItems().length === 0">
+            Nincs találat a jelenlegi szűrésre.
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
 </div>

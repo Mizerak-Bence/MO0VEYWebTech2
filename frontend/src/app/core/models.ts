@@ -61,6 +61,14 @@ export type Palinka = {
   canManage?: boolean;
   currentUserHasConversation?: boolean;
   interestCount?: number;
+  interestEntries?: PalinkaInterestEntry[];
+};
+
+export type PalinkaInterestEntry = {
+  requester: UserSummary;
+  latestMessageAt: string;
+  expiresAt: string;
+  status: 'requested' | 'open';
 };
 
 export type ChatMessage = {

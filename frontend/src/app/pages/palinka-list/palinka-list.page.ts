@@ -179,14 +179,14 @@ export class PalinkaListPage {
   }
 
   reservationLabel(item: Palinka) {
-    const count = item.interestCount ?? 0;
+    const count = item.interestEntries?.length ?? item.interestCount ?? 0;
     if (item.currentUserHasConversation) {
       return 'Beszélgetés megnyitva';
     }
     if (count === 0) {
-      return 'Nincs még érdeklődő';
+      return 'Nincs aktív érdeklődő';
     }
-    return `${count} érdeklődő`;
+    return count === 1 ? '1 aktív érdeklődő' : `${count} aktív érdeklődő`;
   }
 
   describeItem(item: Palinka) {

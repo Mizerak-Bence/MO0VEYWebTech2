@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
 import { ChatThreadModel } from '../models/ChatThread';
 import { PalinkaModel } from '../models/Palinka';
+import { getChatRetentionCutoff } from '../chat-retention';
 import { reservePalinkaSchema, sendChatMessageSchema } from '../validation/chat';
 
 export const chatsRouter = Router();
@@ -12,6 +13,10 @@ const threadAccessFilter = (req: AuthenticatedRequest) =>
     : {
         $or: [{ ownerId: req.userId! }, { requesterId: req.userId! }],
       };
+
+const activeThreadFilter = () => ({ latestMessageAt: { $gte: getChatRetentionCutoff() } });
+
+const purgeExpiredThreads = () => ChatThreadModel.deleteMany({ latestMessageAt: { $lt: getChatRetentionCutoff() } });
 
 const serializeUserSummary = (user: any) => ({
   id: user?._id?.toHexString?.() ?? user?._id?.toString?.() ?? user?.id ?? '',
@@ -63,7 +68,9 @@ const serializeThread = (thread: any, currentUserId: string) => ({
 });
 
 chatsRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const threads = await ChatThreadModel.find(threadAccessFilter(req))
+  await purgeExpiredThreads();
+
+  const threads = await ChatThreadModel.find({ ...threadAccessFilter(req), ...activeThreadFilter() })
     .sort({ latestMessageAt: -1 })
     .populate('palinkaId')
     .populate('ownerId', 'username displayName')
@@ -75,6 +82,8 @@ chatsRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
 });
 
 chatsRouter.post('/reserve', requireAuth, async (req: AuthenticatedRequest, res) => {
+  await purgeExpiredThreads();
+
   const parsed = reservePalinkaSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ message: 'Validation error', issues: parsed.error.issues });
@@ -89,7 +98,11 @@ chatsRouter.post('/reserve', requireAuth, async (req: AuthenticatedRequest, res)
     return res.status(400).json({ message: 'A saját tételedre nem tudsz foglalási beszélgetést indítani.' });
   }
 
-  let thread = await ChatThreadModel.findOne({ palinkaId: palinka._id, requesterId: req.userId });
+  let thread = await ChatThreadModel.findOne({
+    palinkaId: palinka._id,
+    requesterId: req.userId,
+    ...activeThreadFilter(),
+  });
 
   if (!thread) {
     thread = await ChatThreadModel.create({
@@ -132,12 +145,14 @@ chatsRouter.post('/reserve', requireAuth, async (req: AuthenticatedRequest, res)
 });
 
 chatsRouter.post('/:id/messages', requireAuth, async (req: AuthenticatedRequest, res) => {
+  await purgeExpiredThreads();
+
   const parsed = sendChatMessageSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ message: 'Validation error', issues: parsed.error.issues });
   }
 
-  const thread = await ChatThreadModel.findOne({ _id: req.params.id, ...threadAccessFilter(req) });
+  const thread = await ChatThreadModel.findOne({ _id: req.params.id, ...threadAccessFilter(req), ...activeThreadFilter() });
   if (!thread) {
     return res.status(404).json({ message: 'Conversation not found' });
   }
@@ -163,7 +178,9 @@ chatsRouter.post('/:id/messages', requireAuth, async (req: AuthenticatedRequest,
 });
 
 chatsRouter.post('/:id/seen', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const thread = await ChatThreadModel.findOne({ _id: req.params.id, ...threadAccessFilter(req) });
+  await purgeExpiredThreads();
+
+  const thread = await ChatThreadModel.findOne({ _id: req.params.id, ...threadAccessFilter(req), ...activeThreadFilter() });
   if (!thread) {
     return res.status(404).json({ message: 'Conversation not found' });
   }

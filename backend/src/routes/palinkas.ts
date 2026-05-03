@@ -4,6 +4,7 @@ import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
 import { createPalinkaSchema } from '../validation/palinka';
 import { buildPalinkaName } from '../palinka-name';
 import { ChatThreadModel } from '../models/ChatThread';
+import { getChatRetentionCutoff, getChatThreadExpiresAt } from '../chat-retention';
 
 export const palinkasRouter = Router();
 
@@ -14,6 +15,16 @@ const getId = (value: any) =>
   value?.id ??
   value?.toString?.() ??
   '';
+
+const serializeUserSummary = (user: any) => ({
+  id: getId(user),
+  username: user?.username ?? '',
+  displayName: user?.displayName ?? user?.username ?? '',
+});
+
+const activeThreadFilter = () => ({ latestMessageAt: { $gte: getChatRetentionCutoff() } });
+
+const purgeExpiredThreads = () => ChatThreadModel.deleteMany({ latestMessageAt: { $lt: getChatRetentionCutoff() } });
 
 const normalizePayload = (input: Record<string, unknown>) => {
   const body = { ...input } as Record<string, unknown>;
@@ -48,19 +59,35 @@ const manageFilter = (req: AuthenticatedRequest) =>
 
 const withOwnerAndChatMeta = async (items: any[], currentUserId: string, currentUserRole: 'user' | 'admin') => {
   const palinkaIds = items.map((item) => item._id);
+
+  await purgeExpiredThreads();
+
   const threads = palinkaIds.length
-    ? await ChatThreadModel.find({ palinkaId: { $in: palinkaIds } }).select('palinkaId requesterId').lean()
+    ? await ChatThreadModel.find({ palinkaId: { $in: palinkaIds }, ...activeThreadFilter() })
+        .select('palinkaId requesterId latestMessageAt status')
+        .populate('requesterId', 'username displayName')
+        .lean()
     : [];
 
   const interestCountByPalinka = new Map<string, number>();
   const currentUserConversationIds = new Set<string>();
+  const interestEntriesByPalinka = new Map<string, any[]>();
 
   for (const thread of threads) {
     const palinkaId = thread.palinkaId.toString();
     interestCountByPalinka.set(palinkaId, (interestCountByPalinka.get(palinkaId) ?? 0) + 1);
-    if (thread.requesterId.toString() === currentUserId) {
+    if (getId(thread.requesterId) === currentUserId) {
       currentUserConversationIds.add(palinkaId);
     }
+
+    const currentEntries = interestEntriesByPalinka.get(palinkaId) ?? [];
+    currentEntries.push({
+      requester: serializeUserSummary(thread.requesterId),
+      latestMessageAt: thread.latestMessageAt,
+      expiresAt: getChatThreadExpiresAt(thread.latestMessageAt),
+      status: thread.status,
+    });
+    interestEntriesByPalinka.set(palinkaId, currentEntries);
   }
 
   return items
@@ -74,6 +101,10 @@ const withOwnerAndChatMeta = async (items: any[], currentUserId: string, current
           }
         : null;
 
+      const interestEntries = (interestEntriesByPalinka.get(serialized.id) ?? []).sort(
+        (left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime()
+      );
+
       return {
         ...serialized,
         owner,
@@ -81,6 +112,10 @@ const withOwnerAndChatMeta = async (items: any[], currentUserId: string, current
         canManage: currentUserRole === 'admin' || serialized.ownerId === currentUserId,
         currentUserHasConversation: currentUserConversationIds.has(serialized.id),
         interestCount: interestCountByPalinka.get(serialized.id) ?? 0,
+        interestEntries:
+          currentUserRole === 'admin' || serialized.ownerId === currentUserId
+            ? interestEntries
+            : [],
       };
     })
     .sort((left, right) => {
