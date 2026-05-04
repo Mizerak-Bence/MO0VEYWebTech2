@@ -29,13 +29,6 @@ Stack: Angular (+Material) + Node.js (Express) + MongoDB
 3. Backend külön terminálban: `npm run dev:backend`
 4. Frontend külön terminálban: `npm run dev:frontend`
 
-Itt a deploy folyamat általában:
-1. repo feltöltése GitHubra
-2. új web service létrehozása Dockerfile alapján
-3. környezeti változók beállítása
-4. külső MongoDB összekötése
-
-
 Hardcode-olt rendszer admin:
 - felhasználónév: `admin`
 - jelszó: `admin123`
