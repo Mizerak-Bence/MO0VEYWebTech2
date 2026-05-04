@@ -1,134 +1,234 @@
-<div class="page">
-  <mat-card>
-    <mat-card-title>{{ pageTitle() }}</mat-card-title>
+<div class="page studio-surface">
+  <div class="page-shell studio-surface__shell">
+    <div class="page-noise studio-surface__noise"></div>
+    <div class="page-sheen studio-surface__sheen"></div>
 
-    <mat-card-content>
-      <div class="loading" *ngIf="initialLoading()">Adatok betöltése...</div>
-
-      <form [formGroup]="form" (ngSubmit)="submit()" class="form">
-        <mat-form-field appearance="outline">
-          <mat-label>Gyümölcs</mat-label>
-          <input matInput formControlName="fruitType" />
-          <mat-error *ngIf="form.controls.fruitType.touched && form.controls.fruitType.invalid">
-            Kötelező.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Életciklus állapot</mat-label>
-          <mat-select formControlName="status">
-            <mat-option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="form.controls.status.touched && form.controls.status.invalid">
-            Kötelező.
-          </mat-error>
-        </mat-form-field>
-
-        <div class="status-hint-box">{{ selectedStatusHint() }}</div>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Alkoholfok (%)</mat-label>
-          <input matInput type="number" formControlName="abvPercent" />
-          <mat-error *ngIf="form.controls.abvPercent.touched && form.controls.abvPercent.invalid">
-            Ha megadod, 0 és 100 közötti szám legyen.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Mennyiség (liter)</mat-label>
-          <input matInput type="number" formControlName="volumeLiters" />
-          <mat-error *ngIf="form.controls.volumeLiters.touched && form.controls.volumeLiters.invalid">
-            0-nál nagyobb vagy egyenlő szám.
-          </mat-error>
-        </mat-form-field>
-
-        <div class="form-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Minimum mennyiség (liter)</mat-label>
-            <input matInput type="number" formControlName="volumeMinLiters" />
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Maximum mennyiség (liter)</mat-label>
-            <input matInput type="number" formControlName="volumeMaxLiters" />
-          </mat-form-field>
+    <div class="page-content studio-surface__content">
+      <mat-toolbar class="toolbar">
+        <div>
+          <div class="toolbar-title">Pálinka Nyilvántartó</div>
+          <div class="toolbar-subtitle">Új tétel, szerkesztés és auditált állapotkezelés</div>
         </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tároló mérete (liter)</mat-label>
-          <input matInput type="number" formControlName="containerCapacityLiters" />
-        </mat-form-field>
+        <span class="toolbar-spacer"></span>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Főzés</mat-label>
-          <mat-select formControlName="distillationPreset">
-            <mat-option *ngFor="let option of distillationOptions" [value]="option">{{ option }}</mat-option>
-          </mat-select>
-          <mat-error *ngIf="form.controls.distillationPreset.touched && form.controls.distillationPreset.invalid">
-            Kötelező.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" *ngIf="isCustomDistillationSelected()">
-          <mat-label>Egyéni főzés típusa</mat-label>
-          <input matInput formControlName="distillationCustom" />
-          <mat-error *ngIf="form.controls.distillationCustom.touched && !form.controls.distillationCustom.value?.trim()">
-            Add meg az egyéni típust.
-          </mat-error>
-          <mat-error *ngIf="form.controls.distillationCustom.touched && form.controls.distillationCustom.invalid">
-            Legfeljebb 60 karakter lehet.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Készítés dátuma (opcionális)</mat-label>
-          <input matInput [matDatepicker]="picker" formControlName="madeDate" />
-          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-datepicker #picker></mat-datepicker>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Megjegyzés (opcionális)</mat-label>
-          <textarea matInput rows="3" formControlName="notes"></textarea>
-        </mat-form-field>
-
-        <div class="error" *ngIf="error()">{{ error() }}</div>
-
-        <div class="buttons">
-          <button mat-button type="button" routerLink="/palinkas" [disabled]="loading() || initialLoading()">Mégse</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="loading() || initialLoading()">{{ submitLabel() }}</button>
-        </div>
-      </form>
-
-      <section class="history-section" *ngIf="isEditMode()">
-        <div class="history-section-header">
-          <h3>Előzmények</h3>
-          <div class="history-section-subtitle">Ki, mikor és mit változtatott ezen a tételen.</div>
+        <div class="toolbar-user" *ngIf="currentUser() as user">
+          <div class="toolbar-user-name">{{ user.displayName }}</div>
+          <div class="toolbar-user-role">{{ user.role === 'admin' ? 'Rendszer admin' : 'Felhasználó' }}</div>
         </div>
 
-        <div class="history-empty" *ngIf="historyEntries().length === 0">
-          Ennél a tételnél még nincs rögzített előzmény.
+        <a mat-button routerLink="/admin/users" *ngIf="currentUser()?.role === 'admin'">
+          <mat-icon>manage_accounts</mat-icon>
+          Felhasználók
+        </a>
+        <a mat-button routerLink="/palinkas">
+          <mat-icon>inventory_2</mat-icon>
+          Készlet
+        </a>
+        <button mat-button type="button" (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          Kilépés
+        </button>
+      </mat-toolbar>
+
+      <section class="hero-panel studio-surface__hero">
+        <div class="hero-copy">
+          <div class="hero-kicker studio-surface__kicker">{{ heroKicker() }}</div>
+          <h1 class="hero-title studio-surface__title">{{ pageTitle() }}</h1>
+          <p class="hero-text studio-surface__text">{{ pageDescription() }}</p>
+
+          <div class="hero-facts">
+            <div class="hero-fact-chip">Állapot: {{ selectedStatusLabel() }}</div>
+            <div class="hero-fact-chip">{{ isEditMode() ? 'Audit bejegyzés: ' + historyCount() : 'Új rekord készül' }}</div>
+            <div class="hero-fact-chip">{{ currentUser()?.displayName ?? 'Bejelentkezett felhasználó' }}</div>
+          </div>
         </div>
 
-        <div class="history-list" *ngIf="historyEntries().length > 0">
-          <article class="history-item" *ngFor="let entry of historyEntries()">
-            <div class="history-item-header">
-              <div class="history-item-title">{{ entry.title }}</div>
-              <div class="history-item-time">{{ entry.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+        <div class="hero-side">
+          <div class="hero-side-card hero-side-card-primary">
+            <div class="hero-side-label">{{ isEditMode() ? 'Életciklus állapot' : 'Kezdeti állapot' }}</div>
+            <div class="hero-side-value">{{ selectedStatusLabel() }}</div>
+            <div class="hero-side-detail">
+              {{ isEditMode() ? selectedStatusHint() : 'Az új tétel alapból aktívként jön létre, később szerkesztéskor módosítható.' }}
             </div>
+          </div>
 
-            <div class="history-item-actor">
-              {{ entry.actorDisplayName }}<span *ngIf="entry.actorUsername"> (&#64;{{ entry.actorUsername }})</span>
+          <div class="hero-side-card">
+            <div class="hero-side-label">{{ isEditMode() ? 'Audit trail' : 'Űrlap logika' }}</div>
+            <div class="hero-side-value hero-side-value-small">{{ isEditMode() ? historyCount() : 3 }}</div>
+            <div class="hero-side-detail">
+              {{ isEditMode() ? 'Rögzített változás ehhez a tételhez.' : 'Kötelező tengely: gyümölcs, mennyiség, főzés.' }}
             </div>
-
-            <div class="history-item-description" *ngIf="entry.description">{{ entry.description }}</div>
-
-            <div class="history-item-fields" *ngIf="entry.changedFields.length > 0">
-              <span class="history-field" *ngFor="let field of entry.changedFields">{{ field }}</span>
-            </div>
-          </article>
+          </div>
         </div>
       </section>
-    </mat-card-content>
-  </mat-card>
+
+      <div class="editor-grid">
+        <mat-card class="form-card">
+          <mat-card-content>
+            <div class="section-header">
+              <div>
+                <div class="section-kicker studio-surface__kicker">Adatlap</div>
+                <h2 class="section-title studio-surface__title">Tétel adatai</h2>
+                <p class="section-text studio-surface__text">Az alapadatok, mennyiség és életciklus ugyanabban a szerkesztői felületben.</p>
+              </div>
+
+              <div class="loading-banner" *ngIf="initialLoading()">Adatok betöltése...</div>
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+              <mat-form-field appearance="outline">
+                <mat-label>Gyümölcs</mat-label>
+                <input matInput formControlName="fruitType" />
+                <mat-error *ngIf="form.controls.fruitType.touched && form.controls.fruitType.invalid">
+                  Kötelező.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" *ngIf="isEditMode()">
+                <mat-label>Életciklus állapot</mat-label>
+                <mat-select formControlName="status">
+                  <mat-option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="form.controls.status.touched && form.controls.status.invalid">
+                  Kötelező.
+                </mat-error>
+              </mat-form-field>
+
+              <div class="status-hint-box" *ngIf="isEditMode()">{{ selectedStatusHint() }}</div>
+              <div class="status-hint-box" *ngIf="!isEditMode()">
+                Az új tétel automatikusan aktív állapotban jön létre. Ha később lefoglalttá, archiválttá vagy elfogyottá válik, szerkesztéskor módosítható.
+              </div>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Alkoholfok (%)</mat-label>
+                <input matInput type="number" formControlName="abvPercent" />
+                <mat-error *ngIf="form.controls.abvPercent.touched && form.controls.abvPercent.invalid">
+                  Ha megadod, 0 és 100 közötti szám legyen.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Mennyiség (liter)</mat-label>
+                <input matInput type="number" formControlName="volumeLiters" />
+                <mat-error *ngIf="form.controls.volumeLiters.touched && form.controls.volumeLiters.invalid">
+                  0-nál nagyobb vagy egyenlő szám.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Tároló mérete (liter)</mat-label>
+                <input matInput type="number" formControlName="containerCapacityLiters" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Főzés</mat-label>
+                <mat-select formControlName="distillationPreset">
+                  <mat-option *ngFor="let option of distillationOptions" [value]="option">{{ option }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="form.controls.distillationPreset.touched && form.controls.distillationPreset.invalid">
+                  Kötelező.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" *ngIf="isCustomDistillationSelected()">
+                <mat-label>Egyéni főzés típusa</mat-label>
+                <input matInput formControlName="distillationCustom" />
+                <mat-error *ngIf="form.controls.distillationCustom.touched && !form.controls.distillationCustom.value?.trim()">
+                  Add meg az egyéni típust.
+                </mat-error>
+                <mat-error *ngIf="form.controls.distillationCustom.touched && form.controls.distillationCustom.invalid">
+                  Legfeljebb 60 karakter lehet.
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Készítés dátuma (opcionális)</mat-label>
+                <input matInput [matDatepicker]="picker" formControlName="madeDate" />
+                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Megjegyzés (opcionális)</mat-label>
+                <textarea matInput rows="4" formControlName="notes"></textarea>
+              </mat-form-field>
+
+              <div class="error-banner" *ngIf="error()">{{ error() }}</div>
+
+              <div class="buttons">
+                <button mat-button type="button" routerLink="/palinkas" [disabled]="loading() || initialLoading()">Mégse</button>
+                <button mat-flat-button color="primary" type="submit" [disabled]="loading() || initialLoading()">{{ submitLabel() }}</button>
+              </div>
+            </form>
+
+            <section class="history-section" *ngIf="isEditMode()">
+              <div class="history-section-header">
+                <div>
+                  <h3>Előzmények</h3>
+                  <div class="history-section-subtitle">Ki, mikor és mit változtatott ezen a tételen.</div>
+                </div>
+              </div>
+
+              <div class="history-empty" *ngIf="historyEntries().length === 0">
+                Ennél a tételnél még nincs rögzített előzmény.
+              </div>
+
+              <div class="history-list" *ngIf="historyEntries().length > 0">
+                <article class="history-item" *ngFor="let entry of historyEntries()">
+                  <div class="history-item-header">
+                    <div class="history-item-title">{{ entry.title }}</div>
+                    <div class="history-item-time">{{ entry.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+                  </div>
+
+                  <div class="history-item-actor">
+                    {{ entry.actorDisplayName }}<span *ngIf="entry.actorUsername"> (&#64;{{ entry.actorUsername }})</span>
+                  </div>
+
+                  <div class="history-item-description" *ngIf="entry.description">{{ entry.description }}</div>
+
+                  <div class="history-item-fields" *ngIf="entry.changedFields.length > 0">
+                    <span class="history-field" *ngFor="let field of entry.changedFields">{{ field }}</span>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="side-column">
+          <mat-card class="side-card">
+            <mat-card-content>
+              <div class="section-kicker studio-surface__kicker">Gyors támpont</div>
+              <h3 class="side-title">Mire figyelj?</h3>
+
+              <div class="guide-list">
+                <div class="guide-item">Új tétel felvitelekor nem kell életciklus állapotot választani, alapból aktív lesz.</div>
+                <div class="guide-item">Az egyéni főzés csak akkor kell, ha a megadott lista nem elég pontos.</div>
+                <div class="guide-item">Elég egy konkrét mennyiség és opcionálisan a tároló mérete.</div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="side-card">
+            <mat-card-content>
+              <div class="section-kicker studio-surface__kicker">Aktuális összegzés</div>
+              <h3 class="side-title">Űrlap állapota</h3>
+
+              <div class="side-metric">
+                <div class="side-metric-label">Kiválasztott státusz</div>
+                <div class="side-metric-value">{{ selectedStatusLabel() }}</div>
+              </div>
+
+              <div class="side-note">{{ selectedStatusHint() }}</div>
+
+              <div class="side-metric" *ngIf="isEditMode()">
+                <div class="side-metric-label">Audit bejegyzések</div>
+                <div class="side-metric-value">{{ historyCount() }}</div>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </div>
 </div>

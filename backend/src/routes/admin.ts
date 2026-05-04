@@ -24,6 +24,15 @@ const serializeUserSummary = (user: any) => ({
   displayName: user?.displayName ?? user?.username ?? '',
 });
 
+const serializeAdminPalinka = (palinka: any) => ({
+  id: getId(palinka),
+  name: palinka.name,
+  fruitType: palinka.fruitType,
+  volumeLiters: palinka.volumeLiters,
+  madeDate: palinka.madeDate ?? null,
+  createdAt: palinka.createdAt,
+});
+
 const serializeAdminUser = (
   user: any,
   stats: { ownedPalinkaCount?: number; activeInterestCount?: number } = {}
@@ -121,6 +130,23 @@ adminRouter.get('/users', async (_req, res) => {
   return res.json({ users: serialized });
 });
 
+adminRouter.get('/users/:id/palinkas', async (req, res) => {
+  const user = await UserModel.findById(req.params.id).select('username displayName').lean();
+  if (!user) {
+    return res.status(404).json({ message: 'Felhasználó nem található.' });
+  }
+
+  const palinkas = await PalinkaModel.find({ ownerId: req.params.id })
+    .select('name fruitType volumeLiters madeDate createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return res.json({
+    user: serializeUserSummary(user),
+    palinkas: palinkas.map((palinka) => serializeAdminPalinka(palinka)),
+  });
+});
+
 adminRouter.patch('/users/:id', async (req: AuthenticatedRequest, res) => {
   const parsed = adminUpdateUserSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -183,7 +209,17 @@ adminRouter.post('/users/:id/transfer-palinkas', async (req: AuthenticatedReques
     return res.status(400).json({ message: 'Letiltott felhasználóhoz nem adható át tulajdon.' });
   }
 
-  const palinkas = await PalinkaModel.find({ ownerId: sourceUser._id }).select('_id name').lean();
+  const palinkas = await PalinkaModel.find({
+    ownerId: sourceUser._id,
+    _id: { $in: parsed.data.palinkaIds },
+  })
+    .select('_id name')
+    .lean();
+
+  if (palinkas.length !== parsed.data.palinkaIds.length) {
+    return res.status(400).json({ message: 'A kiválasztott tételek között már nem érvényes vagy nem a forrás felhasználóhoz tartozó elem is van.' });
+  }
+
   if (palinkas.length === 0) {
     return res.json({
       transferredCount: 0,
@@ -244,6 +280,6 @@ adminRouter.post('/users/:id/transfer-palinkas', async (req: AuthenticatedReques
     transferredCount: palinkas.length,
     sourceUser: serializeUserSummary(sourceUser),
     targetUser: serializeUserSummary(targetUser),
-    message: `${palinkas.length} tétel tulajdona átkerült a kijelölt felhasználóhoz.`,
+    message: `${palinkas.length} kiválasztott tétel tulajdona átkerült a kijelölt felhasználóhoz.`,
   });
 });

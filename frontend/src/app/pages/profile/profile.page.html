@@ -59,18 +59,16 @@
               <div class="summary-hint">{{ currentUser.username }} néven jelentkeztél be.</div>
             </div>
 
-            <div class="summary-grid">
-              <div class="summary-card summary-card-compact">
-                <div class="summary-label">Szerepkör</div>
-                <mat-chip-set>
-                  <mat-chip>{{ roleLabel() }}</mat-chip>
-                </mat-chip-set>
-              </div>
+            <div class="summary-card summary-card-compact">
+              <div class="summary-label">Szerepkör</div>
+              <mat-chip-set>
+                <mat-chip>{{ roleLabel() }}</mat-chip>
+              </mat-chip-set>
+            </div>
 
-              <div class="summary-card summary-card-compact">
-                <div class="summary-label">Létrehozva</div>
-                <div class="summary-value summary-value-small">{{ currentUser.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
-              </div>
+            <div class="summary-card summary-card-compact">
+              <div class="summary-label">Létrehozva</div>
+              <div class="summary-value summary-value-small">{{ currentUser.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
             </div>
 
             <div class="summary-card summary-card-actions">

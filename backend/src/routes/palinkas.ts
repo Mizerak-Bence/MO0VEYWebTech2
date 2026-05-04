@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { normalizeChatThreadStatus } from '../chat-thread-status';
+import { isChatThreadClosedStatus, normalizeChatThreadStatus } from '../chat-thread-status';
 import { PalinkaModel } from '../models/Palinka';
 import { UserModel } from '../models/User';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
-import { createPalinkaSchema } from '../validation/palinka';
+import { createPalinkaSchema, updatePalinkaStateSchema } from '../validation/palinka';
 import { buildPalinkaName } from '../palinka-name';
 import { ChatThreadModel } from '../models/ChatThread';
 import { getChatRetentionCutoff, getChatThreadExpiresAt } from '../chat-retention';
@@ -89,6 +89,14 @@ const activeThreadFilter = () => ({ latestMessageAt: { $gte: getChatRetentionCut
 
 const purgeExpiredThreads = () => ChatThreadModel.deleteMany({ latestMessageAt: { $lt: getChatRetentionCutoff() } });
 
+const hasExpiredWorkflowClosure = (workflowClosedAt: Date | string | null | undefined) => {
+  if (!workflowClosedAt) {
+    return false;
+  }
+
+  return new Date(workflowClosedAt).getTime() < getChatRetentionCutoff().getTime();
+};
+
 const normalizePayload = (input: Record<string, unknown>) => {
   const body = { ...input } as Record<string, unknown>;
 
@@ -125,6 +133,7 @@ const serializePalinka = (p: any, options?: { includeHistory?: boolean }) => {
     distillationStyle: p.distillationStyle,
     madeDate: p.madeDate ?? null,
     notes: p.notes ?? null,
+    workflowClosedAt: p.workflowClosedAt ?? null,
     createdAt: p.createdAt,
     history: serializedHistory,
   };
@@ -139,7 +148,8 @@ const withOwnerAndChatMeta = async (
   currentUserRole: 'user' | 'admin',
   includeHistory = false
 ) => {
-  const palinkaIds = items.map((item) => item._id);
+  const visibleItems = items.filter((item) => !hasExpiredWorkflowClosure(item.workflowClosedAt));
+  const palinkaIds = visibleItems.map((item) => item._id);
 
   await purgeExpiredThreads();
 
@@ -156,7 +166,10 @@ const withOwnerAndChatMeta = async (
 
   for (const thread of threads) {
     const palinkaId = thread.palinkaId.toString();
-    interestCountByPalinka.set(palinkaId, (interestCountByPalinka.get(palinkaId) ?? 0) + 1);
+    const normalizedStatus = normalizeChatThreadStatus(thread.status);
+    if (!isChatThreadClosedStatus(normalizedStatus)) {
+      interestCountByPalinka.set(palinkaId, (interestCountByPalinka.get(palinkaId) ?? 0) + 1);
+    }
     if (getId(thread.requesterId) === currentUserId) {
       currentUserConversationIds.add(palinkaId);
     }
@@ -166,12 +179,12 @@ const withOwnerAndChatMeta = async (
       requester: serializeUserSummary(thread.requesterId),
       latestMessageAt: thread.latestMessageAt,
       expiresAt: getChatThreadExpiresAt(thread.latestMessageAt),
-      status: normalizeChatThreadStatus(thread.status),
+      status: normalizedStatus,
     });
     interestEntriesByPalinka.set(palinkaId, currentEntries);
   }
 
-  return items
+  return visibleItems
     .map((item) => {
       const serialized = serializePalinka(item, { includeHistory });
       const owner = item.ownerId && typeof item.ownerId === 'object'
@@ -185,6 +198,7 @@ const withOwnerAndChatMeta = async (
       const interestEntries = (interestEntriesByPalinka.get(serialized.id) ?? []).sort(
         (left, right) => new Date(right.latestMessageAt).getTime() - new Date(left.latestMessageAt).getTime()
       );
+      const canSeeInterestIdentities = currentUserRole === 'admin';
 
       return {
         ...serialized,
@@ -193,10 +207,10 @@ const withOwnerAndChatMeta = async (
         canManage: currentUserRole === 'admin' || serialized.ownerId === currentUserId,
         currentUserHasConversation: currentUserConversationIds.has(serialized.id),
         interestCount: interestCountByPalinka.get(serialized.id) ?? 0,
-        interestEntries:
-          currentUserRole === 'admin' || serialized.ownerId === currentUserId
-            ? interestEntries
-            : [],
+        interestEntries: interestEntries.map((entry) => ({
+          ...entry,
+          requester: canSeeInterestIdentities ? entry.requester : null,
+        })),
       };
     })
     .sort((left, right) => {
@@ -208,6 +222,20 @@ const withOwnerAndChatMeta = async (
     });
 };
 
+const loadSerializedPalinkaForUser = async (
+  palinkaId: string,
+  req: AuthenticatedRequest,
+  includeHistory = false
+) => {
+  const item = await PalinkaModel.findById(palinkaId).populate('ownerId', 'username displayName').lean();
+  if (!item) {
+    return null;
+  }
+
+  const [serialized] = await withOwnerAndChatMeta([item], req.userId!, req.userRole!, includeHistory);
+  return serialized ?? null;
+};
+
 palinkasRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
   const items = await PalinkaModel.find({}).select('-history').populate('ownerId', 'username displayName').lean();
 
@@ -215,13 +243,11 @@ palinkasRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
 });
 
 palinkasRouter.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const item = await PalinkaModel.findById(req.params.id).populate('ownerId', 'username displayName').lean();
-
-  if (!item) {
+  const serialized = await loadSerializedPalinkaForUser(String(req.params.id), req, true);
+  if (!serialized) {
     return res.status(404).json({ message: 'Palinka not found' });
   }
 
-  const [serialized] = await withOwnerAndChatMeta([item], req.userId!, req.userRole!, true);
   return res.json(serialized);
 });
 
@@ -307,7 +333,12 @@ palinkasRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) =
   const changedFields = getChangedFields(current.toObject() as Record<string, unknown>, nextValues as Record<string, unknown>);
 
   if (changedFields.length === 0) {
-    return res.json(serializePalinka(current.toObject(), { includeHistory: true }));
+    const serialized = await loadSerializedPalinkaForUser(String(req.params.id), req, true);
+    if (!serialized) {
+      return res.status(404).json({ message: 'Palinka not found' });
+    }
+
+    return res.json(serialized);
   }
 
   const actor = await loadHistoryActor(req.userId!);
@@ -343,13 +374,82 @@ palinkasRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) =
 
     await current.save();
 
-    return res.json(serializePalinka(current.toObject(), { includeHistory: true }));
+    const serialized = await loadSerializedPalinkaForUser(String(req.params.id), req, true);
+    if (!serialized) {
+      return res.status(404).json({ message: 'Palinka not found' });
+    }
+
+    return res.json(serialized);
   } catch (err: any) {
     if (err?.code === 11000) {
       return res.status(409).json({ message: 'Ilyen tétel már létezik.' });
     }
     throw err;
   }
+});
+
+palinkasRouter.patch('/:id/state', requireAuth, async (req: AuthenticatedRequest, res) => {
+  const parsed = updatePalinkaStateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Validation error', issues: parsed.error.issues });
+  }
+
+  const current = await PalinkaModel.findOne({ _id: req.params.id, ...manageFilter(req) });
+  if (!current) {
+    return res.status(404).json({ message: 'Palinka not found' });
+  }
+
+  const actor = await loadHistoryActor(req.userId!);
+  const nextState = parsed.data.state;
+  let shouldSave = false;
+
+  if (nextState === 'closed') {
+    if (!current.workflowClosedAt) {
+      current.workflowClosedAt = new Date();
+      current.workflowClosedThreadId = undefined as any;
+      current.history.push(
+        createPalinkaHistoryEntry({
+          type: 'updated',
+          actor,
+          title: 'Tétel lezárva',
+          description: 'A tétel kézi lezárással lezárt állapotba került.',
+        }) as any
+      );
+      shouldSave = true;
+    }
+  } else {
+    const nextStatus = normalizePalinkaStatus(nextState);
+    const previousStatus = normalizePalinkaStatus(current.status);
+    const wasClosed = !!current.workflowClosedAt;
+    const statusChanged = previousStatus !== nextStatus;
+
+    if (wasClosed || statusChanged) {
+      current.status = nextStatus;
+      current.workflowClosedAt = undefined;
+      current.workflowClosedThreadId = undefined as any;
+      current.history.push(
+        createPalinkaHistoryEntry({
+          type: 'status_changed',
+          actor,
+          title: wasClosed ? 'Tétel újranyitva' : 'Állapot módosítva',
+          description: `${wasClosed ? 'Lezárva' : getPalinkaStatusLabel(previousStatus)} -> ${getPalinkaStatusLabel(nextStatus)}`,
+          status: nextStatus,
+        }) as any
+      );
+      shouldSave = true;
+    }
+  }
+
+  if (shouldSave) {
+    await current.save();
+  }
+
+  const serialized = await loadSerializedPalinkaForUser(String(req.params.id), req, true);
+  if (!serialized) {
+    return res.status(404).json({ message: 'Palinka not found' });
+  }
+
+  return res.json(serialized);
 });
 
 palinkasRouter.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res) => {

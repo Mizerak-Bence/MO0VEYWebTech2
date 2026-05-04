@@ -1,4 +1,9 @@
 <router-outlet />
+@if (showScrollTopButton()) {
+	<button mat-fab type="button" class="scroll-top-fab" (click)="scrollToTop()" aria-label="Oldal tetejére">
+		<mat-icon>north</mat-icon>
+	</button>
+}
 @if (showChatWidget()) {
 	<app-chat-widget />
 }

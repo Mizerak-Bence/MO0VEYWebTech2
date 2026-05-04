@@ -39,24 +39,18 @@
         <div class="hero-copy">
           <div class="hero-kicker studio-surface__kicker">Belső irányítópult</div>
           <h1 class="hero-title studio-surface__title">Pálinkák, érdeklődések és készlet egy térben</h1>
-          <p class="hero-text studio-surface__text">
-            Ugyanaz a meleg tónusú arculat, mint a belépésnél, csak széthúzva a napi munkára: keresés,
-            állapotkövetés és gyors műveletek egy középső shellben.
-          </p>
         </div>
 
-        <div class="hero-side">
-          <div class="hero-side-card">
-            <div class="hero-side-label">Bejelentkezve</div>
-            <div class="hero-side-value">{{ currentUser()?.displayName ?? 'Ismeretlen felhasználó' }}</div>
-            <div class="hero-side-detail">{{ currentUser()?.role === 'admin' ? 'Teljes rendszer-hozzaferes' : 'Sajat tetelek es erdeklodesek kezelese' }}</div>
-          </div>
+        <div class="hero-side-card hero-side-card-identity">
+          <div class="hero-side-label">Bejelentkezve</div>
+          <div class="hero-side-value">{{ currentUser()?.displayName ?? 'Ismeretlen felhasználó' }}</div>
+          <div class="hero-side-detail">{{ currentUser()?.role === 'admin' ? 'Teljes rendszer-hozzaferes' : 'Sajat tetelek es erdeklodesek kezelese' }}</div>
+        </div>
 
-          <div class="hero-side-card hero-side-card-accent">
-            <div class="hero-side-label">Aktiv nezet</div>
-            <div class="hero-side-value">{{ viewMode() === 'own' ? 'Sajat tetelek' : 'Teljes keszlet' }}</div>
-            <div class="hero-side-detail">{{ filteredItems().length }} tetel a jelenlegi szuresben</div>
-          </div>
+        <div class="hero-side-card hero-side-card-accent hero-side-card-activity">
+          <div class="hero-side-label">Aktiv nezet</div>
+          <div class="hero-side-value">{{ viewMode() === 'own' ? 'Sajat tetelek' : 'Teljes keszlet' }}</div>
+          <div class="hero-side-detail">{{ filteredItems().length }} tetel a jelenlegi szuresben</div>
         </div>
       </section>
 
@@ -86,17 +80,34 @@
         <mat-card-content>
           <div class="list-header trend-header">
             <div>
-              <div class="section-kicker studio-surface__kicker">Heti dashboard</div>
+              <div class="trend-kicker-row">
+                <div class="section-kicker studio-surface__kicker">Heti dashboard</div>
+
+                <div class="trend-info-widget">
+                  <button type="button" class="trend-info-trigger" aria-describedby="trend-info-popover" aria-label="7 napos aktivitás magyarázata">
+                    I
+                  </button>
+                  <div class="trend-info-popover" id="trend-info-popover">
+                    <div class="trend-info-title">Mit jelent?</div>
+                    <div class="trend-info-text">
+                        Az utolsó 7 napot mutatja a látható tételekre. Az új tétel a létrehozás napjára kerül, az érdeklődés és lezárás a legutóbbi aktivitásra. A keresés és a nézetváltás ezt is szűri.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <h2 class="section-title studio-surface__title">7 napos aktivitási idősor</h2>
               <p class="section-text studio-surface__text">
                 Új tételek, érdeklődési aktivitás és lezárt egyeztetések a jelenlegi szűrés és látható adatok alapján.
               </p>
             </div>
 
-            <div class="trend-legend">
-              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-inventory"></span> Készletbővülés</span>
-              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-interest"></span> Érdeklődések</span>
-              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-closure"></span> Lezárások</span>
+            <div class="trend-side">
+              <div class="trend-legend">
+                <span class="trend-legend-item"><span class="trend-swatch trend-swatch-inventory"></span> Készletbővülés</span>
+                <span class="trend-legend-item"><span class="trend-swatch trend-swatch-interest"></span> Érdeklődések</span>
+                <span class="trend-legend-item"><span class="trend-swatch trend-swatch-closure"></span> Lezárások</span>
+              </div>
             </div>
           </div>
 
@@ -211,7 +222,7 @@
               </ng-container>
 
               <ng-container matColumnDef="abvPercent">
-                <th mat-header-cell *matHeaderCellDef>%</th>
+                <th mat-header-cell *matHeaderCellDef>Alkoholfok</th>
                 <td mat-cell *matCellDef="let p">{{ formatAbv(p.abvPercent) }}</td>
               </ng-container>
 
@@ -233,19 +244,47 @@
               <ng-container matColumnDef="status">
                 <th mat-header-cell *matHeaderCellDef>Állapot</th>
                 <td mat-cell *matCellDef="let p">
-                  <span class="status-pill" [class]="'status-pill status-pill-' + p.status">{{ statusLabel(p.status) }}</span>
-                  <div class="cell-secondary">{{ statusDescription(p.status) }}</div>
+                  <div class="status-line">
+                    <span [class]="statusClass(p)">{{ statusLabel(p) }}</span>
+                    <button
+                      *ngIf="showFreshInterestInfo(p)"
+                      type="button"
+                      class="status-info-trigger"
+                      [title]="statusDescription(p)"
+                      aria-label="Aktív állapot magyarázata"
+                    >
+                      I
+                    </button>
+                  </div>
+                  <div class="cell-secondary" *ngIf="statusInlineDescription(p)">{{ statusInlineDescription(p) }}</div>
+                  <div class="status-owner-row" *ngIf="canAdjustState(p)">
+                    <label class="visually-hidden" [attr.for]="'palinka-state-' + p.id">Tétel állapota</label>
+                    <select
+                      class="status-owner-select"
+                      [id]="'palinka-state-' + p.id"
+                      [ngModel]="ownerStateValue(p)"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="isUpdatingState(p.id)"
+                      (ngModelChange)="updateOwnerState(p, $event)"
+                    >
+                      <option *ngFor="let option of ownerStateOptions" [value]="option.value">{{ option.label }}</option>
+                    </select>
+                    <span class="cell-secondary" *ngIf="isUpdatingState(p.id)">Mentés...</span>
+                  </div>
                 </td>
               </ng-container>
 
               <ng-container matColumnDef="reservation">
                 <th mat-header-cell *matHeaderCellDef>Érdeklődés</th>
                 <td mat-cell *matCellDef="let p">
-                  <div class="cell-primary">{{ reservationLabel(p) }}</div>
+                  <div class="reservation-line">
+                    <div class="cell-primary">{{ reservationLabel(p) }}</div>
+                    <span class="own-interest-badge" *ngIf="showOwnInterestBadge(p)">Te is érdeklődsz</span>
+                  </div>
                   <div class="cell-secondary" *ngIf="reservationHint(p)">{{ reservationHint(p) }}</div>
-                  <div class="interest-list" *ngIf="p.interestEntries?.length">
-                    <div class="interest-item" *ngFor="let interest of p.interestEntries">
-                      <div class="interest-name">{{ interest.requester.displayName }}</div>
+                  <div class="interest-list" *ngIf="currentUser()?.role === 'admin' && adminInterestEntries(p).length">
+                    <div class="interest-item" *ngFor="let interest of adminInterestEntries(p)">
+                      <div class="interest-name">{{ interest.requester?.displayName ?? 'Ismeretlen érdeklődő' }}</div>
                       <div class="interest-meta">
                         {{ interestStatusLabel(interest.status) }} · {{ interestStatusDescription(interest.status) }} · törlés:
                         {{ interest.expiresAt | date: 'MM-dd HH:mm' }}
@@ -260,7 +299,7 @@
 
               <ng-container matColumnDef="madeDate">
                 <th mat-header-cell *matHeaderCellDef>Készült</th>
-                <td mat-cell *matCellDef="let p">{{ p.madeDate ? (p.madeDate | date: 'yyyy-MM-dd') : '-' }}</td>
+                <td mat-cell *matCellDef="let p" class="made-date-cell">{{ p.madeDate ? (p.madeDate | date: 'yyyy-MM-dd') : '-' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="actions">

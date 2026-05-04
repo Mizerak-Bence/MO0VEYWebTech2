@@ -1,6 +1,7 @@
 export const PALINKA_STATUS_VALUES = ['active', 'reserved', 'partial', 'exhausted', 'archived'] as const;
 
 export type PalinkaStatus = (typeof PALINKA_STATUS_VALUES)[number];
+export type PalinkaManageableState = PalinkaStatus | 'closed';
 
 export const CHAT_INTEREST_STATUS_VALUES = ['new_interest', 'contacted', 'negotiating', 'closed', 'rejected'] as const;
 
@@ -61,6 +62,15 @@ export type AdminUserSummary = UserProfile & {
   activeInterestCount: number;
 };
 
+export type AdminOwnedPalinkaSummary = {
+  id: string;
+  name: string;
+  fruitType: string;
+  volumeLiters: number;
+  madeDate: string | null;
+  createdAt: string;
+};
+
 export type UpdateAdminUserRequest = {
   role?: 'user' | 'admin';
   isDisabled?: boolean;
@@ -68,6 +78,7 @@ export type UpdateAdminUserRequest = {
 
 export type TransferPalinkaOwnershipRequest = {
   targetUserId: string;
+  palinkaIds: string[];
 };
 
 export type TransferPalinkaOwnershipResponse = {
@@ -80,6 +91,10 @@ export type TransferPalinkaOwnershipResponse = {
 export type ChangePasswordRequest = {
   currentPassword: string;
   newPassword: string;
+};
+
+export type UpdatePalinkaStateRequest = {
+  state: PalinkaManageableState;
 };
 
 export type VerifyCurrentPasswordRequest = {
@@ -105,6 +120,7 @@ export type Palinka = {
   distillationStyle: string;
   madeDate: string | null;
   notes: string | null;
+  workflowClosedAt?: string | null;
   createdAt: string;
   isOwnedByCurrentUser?: boolean;
   canManage?: boolean;
@@ -127,7 +143,7 @@ export type PalinkaHistoryEntry = {
 };
 
 export type PalinkaInterestEntry = {
-  requester: UserSummary;
+  requester: UserSummary | null;
   latestMessageAt: string;
   expiresAt: string;
   status: ChatInterestStatus;

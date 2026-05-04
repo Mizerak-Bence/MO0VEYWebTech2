@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { palinkaStatusValues } from '../palinka-status';
 import { isSafeText, safeTextValidationMessage } from './safe-text';
 
+const palinkaManageStateValues = [...palinkaStatusValues, 'closed'] as const;
+
 export const createPalinkaSchema = z.object({
   name: z.string().trim().min(2).max(100).refine(isSafeText, safeTextValidationMessage).optional(),
   fruitType: z.string().trim().min(2).max(60).refine(isSafeText, safeTextValidationMessage),
@@ -14,4 +16,8 @@ export const createPalinkaSchema = z.object({
   distillationStyle: z.string().trim().min(2).max(60).refine(isSafeText, safeTextValidationMessage),
   madeDate: z.string().datetime().optional(),
   notes: z.string().trim().max(500).refine(isSafeText, safeTextValidationMessage).optional(),
+});
+
+export const updatePalinkaStateSchema = z.object({
+  state: z.enum(palinkaManageStateValues),
 });

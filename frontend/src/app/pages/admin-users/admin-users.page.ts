@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,7 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { finalize } from 'rxjs/operators';
 import { AdminUsersService } from '../../core/admin-users.service';
 import { AuthService } from '../../core/auth.service';
-import type { AdminUserSummary } from '../../core/models';
+import type { AdminOwnedPalinkaSummary, AdminUserSummary } from '../../core/models';
 
 @Component({
   selector: 'app-admin-users-page',
@@ -35,14 +35,19 @@ export class AdminUsersPage {
   private readonly adminUsers = inject(AdminUsersService);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private loadedTransferUserId: string | null = null;
 
   readonly currentUser = this.auth.currentUser;
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly transferring = signal(false);
+  readonly transferItemsLoading = signal(false);
+  readonly showTransferItems = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
   readonly users = signal<AdminUserSummary[]>([]);
+  readonly ownedPalinkas = signal<AdminOwnedPalinkaSummary[]>([]);
+  readonly selectedTransferPalinkaIds = signal<string[]>([]);
   readonly selectedUserId = signal<string | null>(null);
   readonly roleOptions = [
     { value: 'user' as const, label: 'Felhasználó', description: 'Saját tételek és érdeklődések kezelése.' },
@@ -63,6 +68,14 @@ export class AdminUsersPage {
   readonly selectedUserDisplayName = computed(() => this.selectedUser()?.displayName ?? 'Nincs kiválasztva');
   readonly selectedUserOwnedPalinkaCount = computed(() => this.selectedUser()?.ownedPalinkaCount ?? 0);
   readonly selectedUserActiveInterestCount = computed(() => this.selectedUser()?.activeInterestCount ?? 0);
+  readonly selectedTransferPalinkas = computed(() => {
+    const selectedIds = new Set(this.selectedTransferPalinkaIds());
+    return this.ownedPalinkas().filter((palinka) => selectedIds.has(palinka.id));
+  });
+  readonly selectedTransferPalinkaCount = computed(() => this.selectedTransferPalinkaIds().length);
+  readonly allOwnedPalinkasSelected = computed(
+    () => this.ownedPalinkas().length > 0 && this.selectedTransferPalinkaCount() === this.ownedPalinkas().length
+  );
 
   readonly targetUsers = computed(() => {
     const selectedUser = this.selectedUser();
@@ -96,7 +109,34 @@ export class AdminUsersPage {
       }
     });
 
+    effect(() => {
+      const selectedUser = this.selectedUser();
+      if (!selectedUser || this.loadedTransferUserId === selectedUser.id) {
+        return;
+      }
+
+      this.loadedTransferUserId = selectedUser.id;
+      this.showTransferItems.set(false);
+      this.transferItemsLoading.set(false);
+      this.ownedPalinkas.set([]);
+      this.selectedTransferPalinkaIds.set([]);
+    });
+
+    effect(() => {
+      const selectedUser = this.selectedUser();
+      if (!selectedUser || !this.canTransferOwnership(selectedUser)) {
+        this.ownedPalinkas.set([]);
+        this.selectedTransferPalinkaIds.set([]);
+        this.showTransferItems.set(false);
+        return;
+      }
+    });
+
     this.loadUsers();
+  }
+
+  ngOnDestroy() {
+    this.transferItemsLoading.set(false);
   }
 
   loadUsers(preferredUserId?: string) {
@@ -124,8 +164,55 @@ export class AdminUsersPage {
 
   selectUser(userId: string) {
     this.selectedUserId.set(userId);
+    this.selectedTransferPalinkaIds.set([]);
+    this.showTransferItems.set(false);
     this.error.set(null);
     this.success.set(null);
+  }
+
+  toggleTransferItemsPanel() {
+    const selectedUser = this.selectedUser();
+    if (!this.canTransferOwnership(selectedUser)) {
+      return;
+    }
+
+    const nextVisible = !this.showTransferItems();
+    this.showTransferItems.set(nextVisible);
+
+    if (nextVisible && this.ownedPalinkas().length === 0 && !this.transferItemsLoading()) {
+      this.loadOwnedPalinkas(selectedUser!.id);
+    }
+  }
+
+  loadOwnedPalinkas(userId: string) {
+    this.transferItemsLoading.set(true);
+
+    this.adminUsers
+      .listOwnedPalinkas(userId)
+      .pipe(finalize(() => {
+        if (this.selectedUserId() === userId) {
+          this.transferItemsLoading.set(false);
+        }
+      }))
+      .subscribe({
+        next: (palinkas) => {
+          if (this.selectedUserId() !== userId) {
+            return;
+          }
+
+          this.ownedPalinkas.set(palinkas);
+          this.selectedTransferPalinkaIds.update((ids) => ids.filter((id) => palinkas.some((palinka) => palinka.id === id)));
+        },
+        error: (err) => {
+          if (this.selectedUserId() !== userId) {
+            return;
+          }
+
+          this.ownedPalinkas.set([]);
+          this.selectedTransferPalinkaIds.set([]);
+          this.error.set(err?.error?.message ?? 'Nem sikerült betölteni a kiválasztott felhasználó tételeit.');
+        },
+      });
   }
 
   roleLabel(role: 'user' | 'admin') {
@@ -146,6 +233,35 @@ export class AdminUsersPage {
 
   canManage(user: AdminUserSummary | null) {
     return !!user && !user.isSystemAdmin && !this.isCurrentUser(user);
+  }
+
+  canTransferOwnership(user: AdminUserSummary | null) {
+    return !!user && user.ownedPalinkaCount > 0;
+  }
+
+  formatVolume(value: number) {
+    return new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 2 }).format(value);
+  }
+
+  isTransferPalinkaSelected(palinkaId: string) {
+    return this.selectedTransferPalinkaIds().includes(palinkaId);
+  }
+
+  toggleTransferPalinka(palinkaId: string, checked: boolean) {
+    this.selectedTransferPalinkaIds.update((ids) => {
+      const nextIds = new Set(ids);
+      if (checked) {
+        nextIds.add(palinkaId);
+      } else {
+        nextIds.delete(palinkaId);
+      }
+
+      return [...nextIds];
+    });
+  }
+
+  toggleAllTransferPalinkas() {
+    this.selectedTransferPalinkaIds.set(this.allOwnedPalinkasSelected() ? [] : this.ownedPalinkas().map((palinka) => palinka.id));
   }
 
   saveRole() {
@@ -227,13 +343,18 @@ export class AdminUsersPage {
       return;
     }
 
-    if (!this.canManage(selectedUser)) {
+    if (!this.canTransferOwnership(selectedUser)) {
       this.error.set('Ehhez a felhasználóhoz nem érhető el tulajdon-átruházás.');
       return;
     }
 
     if (selectedUser.ownedPalinkaCount === 0) {
       this.error.set('A kiválasztott felhasználónak nincs saját tétele.');
+      return;
+    }
+
+    if (this.selectedTransferPalinkaCount() === 0) {
+      this.error.set('Válassz ki legalább egy átruházandó tételt.');
       return;
     }
 
@@ -244,8 +365,14 @@ export class AdminUsersPage {
 
     const targetUserId = this.transferForm.controls.targetUserId.value;
     const targetUser = this.targetUsers().find((user) => user.id === targetUserId);
+    const selectedPalinkas = this.selectedTransferPalinkas();
+    const preview = selectedPalinkas
+      .slice(0, 4)
+      .map((palinka) => `- ${palinka.name}`)
+      .join('\n');
+    const remainingCount = selectedPalinkas.length - Math.min(selectedPalinkas.length, 4);
     const confirmed = window.confirm(
-      `Biztosan átadod ${selectedUser.ownedPalinkaCount} tétel tulajdonjogát ${targetUser?.displayName ?? 'a kiválasztott felhasználó'} részére?`
+      `Biztosan átadod ${selectedUser.displayName} felhasználótól ${selectedPalinkas.length} kiválasztott tétel tulajdonjogát ${targetUser?.displayName ?? 'a kiválasztott felhasználó'} részére?\n\n${preview}${remainingCount > 0 ? `\n...és még ${remainingCount} tétel.` : ''}`
     );
 
     if (!confirmed) {
@@ -256,12 +383,15 @@ export class AdminUsersPage {
     this.success.set(null);
     this.transferring.set(true);
     this.adminUsers
-      .transferPalinkas(selectedUser.id, { targetUserId })
+      .transferPalinkas(selectedUser.id, { targetUserId, palinkaIds: selectedPalinkas.map((palinka) => palinka.id) })
       .pipe(finalize(() => this.transferring.set(false)))
       .subscribe({
         next: (response) => {
           this.success.set(response.message);
           this.transferForm.controls.targetUserId.setValue('', { emitEvent: false });
+          this.selectedTransferPalinkaIds.set([]);
+          this.showTransferItems.set(false);
+          this.ownedPalinkas.set([]);
           this.loadUsers(selectedUser.id);
         },
         error: (err) => {

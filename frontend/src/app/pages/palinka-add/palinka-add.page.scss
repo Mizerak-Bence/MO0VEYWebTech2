@@ -1,65 +1,232 @@
-.page {
-  padding: 16px;
+.page-shell {
+  width: min(1440px, 100%);
+  max-width: 1440px;
 }
 
-mat-card {
-  margin: 0 auto;
-  max-width: 720px;
+.toolbar {
+  margin-bottom: 22px;
+  border-radius: 24px;
+  overflow: hidden;
+  min-height: 78px;
+  background: linear-gradient(135deg, var(--accent-deep) 0%, #6d3d11 40%, var(--accent) 100%);
+  color: #fff5e7;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 34px rgba(92, 47, 11, 0.2);
+}
+
+.toolbar-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.toolbar-subtitle,
+.toolbar-user-role {
+  font-size: 0.82rem;
+  opacity: 0.82;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-user {
+  margin-right: 12px;
+  text-align: right;
+}
+
+.toolbar-user-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.hero-panel {
+  grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+  align-items: start;
+}
+
+.hero-copy,
+.hero-side,
+.section-header,
+.guide-list,
+.side-column,
+.form,
+.history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.hero-title {
+  max-width: 11ch;
+  font-size: clamp(2.35rem, 4.8vw, 4rem);
+}
+
+.hero-text {
+  max-width: 41rem;
+  font-size: 1.02rem;
+}
+
+.hero-facts,
+.buttons,
+.history-item-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-fact-chip,
+.history-field {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 248, 239, 0.8);
+  border: 1px solid rgba(126, 81, 34, 0.14);
+  color: #6d4b27;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.hero-side-card,
+.form-card,
+.side-card {
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255, 251, 245, 0.78);
+  border: 1px solid rgba(126, 81, 34, 0.12);
+  box-shadow: 0 18px 40px rgba(62, 33, 11, 0.08);
+}
+
+.hero-side {
+  align-content: start;
+}
+
+.hero-side-card {
+  padding: 18px 20px;
+}
+
+.hero-side-card-primary {
+  background: linear-gradient(135deg, rgba(140, 82, 30, 0.16), rgba(255, 249, 241, 0.84));
+}
+
+.hero-side-label,
+.side-metric-label,
+.history-section-subtitle,
+.history-item-time,
+.history-item-actor,
+.history-item-description {
+  color: #7b6b5a;
+  font-size: 0.88rem;
+}
+
+.hero-side-value,
+.side-metric-value {
+  color: var(--text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.08;
+  font-weight: 800;
+}
+
+.hero-side-value-small {
+  font-size: 1.55rem;
+}
+
+.hero-side-detail,
+.side-note {
+  margin-top: 6px;
+  color: #6d5338;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(280px, 0.84fr);
+  gap: 20px;
+}
+
+.form-card .mat-mdc-card-content,
+.side-card .mat-mdc-card-content {
+  padding: clamp(18px, 2.5vw, 28px);
+}
+
+.side-card .mat-mdc-card-content {
+  display: grid;
+  gap: 16px;
+}
+
+.section-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 18px;
+  align-items: start;
+}
+
+.section-title,
+.side-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.side-title {
+  font-size: 1.38rem;
+  font-weight: 800;
+  line-height: 1.08;
 }
 
 .form {
-  display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.status-hint-box,
+.loading-banner,
+.error-banner,
+.history-empty,
+.guide-item,
+.side-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(246, 239, 228, 0.92);
+  border: 1px solid rgba(126, 81, 34, 0.12);
+  color: #6b4b22;
+}
+
+.guide-list {
+  gap: 18px;
+}
+
+.guide-item {
+  padding: 16px 22px;
+  line-height: 1.65;
+  font-size: 0.98rem;
 }
 
 .buttons {
-  display: flex;
   justify-content: flex-end;
-  gap: 8px;
+}
+
+.buttons button[mat-button],
+.buttons button[mat-flat-button] {
+  min-height: 46px;
+  border-radius: 16px;
 }
 
 .history-section {
   margin-top: 28px;
-  padding-top: 20px;
+  padding-top: 22px;
   border-top: 1px solid rgba(92, 47, 11, 0.12);
 }
 
-.history-section-header {
-  margin-bottom: 12px;
-}
-
-.history-section-header h3 {
+.history-section-header h3,
+.history-item-title {
   margin: 0 0 4px;
-}
-
-.history-section-subtitle {
-  color: #6b5c4d;
-  font-size: 0.9rem;
-}
-
-.history-empty {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: #f8f1e6;
-  color: #6b5c4d;
-}
-
-.history-list {
-  display: grid;
-  gap: 12px;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .history-item {
   padding: 14px 16px;
-  border-radius: 14px;
-  background: #fbf7f1;
+  border-radius: 16px;
+  background: rgba(255, 249, 241, 0.86);
   border: 1px solid rgba(92, 47, 11, 0.1);
 }
 
@@ -70,65 +237,47 @@ mat-card {
   gap: 12px;
 }
 
-.history-item-title {
-  color: #2d1b0f;
-  font-weight: 700;
-}
-
-.history-item-time,
 .history-item-actor,
-.history-item-description {
-  color: #6b5c4d;
-  font-size: 0.88rem;
-}
-
-.history-item-actor,
-.history-item-description {
-  margin-top: 6px;
-}
-
-.history-item-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.history-item-description,
+.history-item-fields,
+.side-metric + .side-note,
+.side-metric + .side-metric {
   margin-top: 10px;
-}
-
-.history-field {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: #f2e5d3;
-  color: #6b4b22;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.error {
-  margin: 8px 0;
-}
-
-.loading {
-  margin-bottom: 12px;
-}
-
-.status-hint-box {
-  margin-top: -4px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #f6efe4;
-  color: #6b4b22;
-  font-size: 0.88rem;
 }
 
 mat-form-field {
   width: 100%;
 }
 
-@media (max-width: 720px) {
-  .form-grid {
+@media (max-width: 1080px) {
+  .toolbar {
+    min-height: auto;
+    padding-block: 10px;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hero-panel,
+  .editor-grid,
+  .section-header {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .history-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbar-user,
+  .buttons {
+    margin-right: 0;
+    text-align: left;
+  }
+
+  .buttons button[mat-button],
+  .buttons button[mat-flat-button] {
+    width: 100%;
   }
 }

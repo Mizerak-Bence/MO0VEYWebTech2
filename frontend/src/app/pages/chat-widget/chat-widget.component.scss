@@ -72,6 +72,7 @@
 .thread-item-title {
   font-weight: 700;
   color: #2d1b0f;
+  overflow-wrap: anywhere;
 }
 
 .thread-item-meta,
@@ -104,6 +105,7 @@
 
 .thread-item-preview {
   margin-top: 6px;
+  overflow-wrap: anywhere;
 }
 
 .chat-conversation {
@@ -117,12 +119,28 @@
   border-bottom: 1px solid rgba(92, 47, 11, 0.1);
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   font-weight: 700;
   color: #2d1b0f;
 }
 
+.conversation-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.conversation-heading {
+  overflow-wrap: anywhere;
+}
+
+.conversation-owner {
+  overflow-wrap: anywhere;
+}
+
 .conversation-status-block {
+  min-width: 0;
+  flex: 0 1 220px;
   text-align: right;
 }
 
@@ -169,13 +187,27 @@
 
 .workflow-actions {
   padding: 12px 14px 0;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 8px;
 }
 
 .workflow-action {
   border-radius: 999px;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.workflow-reopen {
+  border-radius: 999px;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.workflow-actions .mdc-button {
+  width: 100%;
 }
 
 .message-list {
@@ -262,10 +294,17 @@
 
   .conversation-status-block {
     text-align: left;
+    flex-basis: auto;
   }
 
   .thread-list {
     border-right: 0;
     border-bottom: 1px solid rgba(92, 47, 11, 0.1);
+  }
+}
+
+@media (max-width: 560px) {
+  .workflow-actions {
+    grid-template-columns: 1fr;
   }
 }

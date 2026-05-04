@@ -51,8 +51,8 @@
 
       <div class="chat-conversation" *ngIf="selectedThread() as thread; else emptyConversation">
         <div class="conversation-title">
-          <div>
-            <div>{{ thread.palinka?.fruitType }} · {{ thread.palinka?.volumeLiters }} L</div>
+          <div class="conversation-main">
+            <div class="conversation-heading">{{ thread.palinka?.fruitType }} · {{ thread.palinka?.volumeLiters }} L</div>
             <div class="conversation-owner">Tulajdonos: {{ thread.owner.displayName }}</div>
           </div>
           <div class="conversation-status-block">
@@ -63,10 +63,22 @@
 
         <div class="workflow-actions" *ngIf="thread.canManageWorkflow">
           <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            class="workflow-reopen"
+            *ngIf="canReopenThread(thread)"
+            [disabled]="updatingStatus()"
+            (click)="reopenThread()"
+          >
+            Újra megnyitás
+          </button>
+
+          <button
             mat-stroked-button
             type="button"
             class="workflow-action"
-            *ngFor="let option of workflowOptions"
+            *ngFor="let option of workflowOptionsFor(thread)"
             [disabled]="updatingStatus() || option.value === thread.status"
             (click)="updateThreadStatus(option.value)"
           >

@@ -1,5 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -17,8 +18,10 @@ import {
   CHAT_INTEREST_STATUS_LABELS,
   isClosedChatInterestStatus,
   type ChatInterestStatus,
+  type PalinkaManageableState,
   type Palinka,
   type PalinkaStatus,
+  type UpdatePalinkaRequest,
 } from '../../core/models';
 import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
@@ -41,6 +44,7 @@ type DashboardTimelinePoint = {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterModule,
     MatButtonModule,
     MatCardModule,
@@ -56,6 +60,8 @@ type DashboardTimelinePoint = {
   styleUrl: './palinka-list.page.scss',
 })
 export class PalinkaListPage {
+  private readonly interestHighlightWindowMs = 48 * 60 * 60 * 1000;
+  private pollHandle: ReturnType<typeof setInterval> | null = null;
   private readonly weekdayFormatter = new Intl.DateTimeFormat('hu-HU', { weekday: 'short' });
   private readonly shortDateFormatter = new Intl.DateTimeFormat('hu-HU', { month: '2-digit', day: '2-digit' });
   private readonly statusLabels: Record<PalinkaStatus, string> = {
@@ -73,6 +79,14 @@ export class PalinkaListPage {
     exhausted: 'Készlethiány miatt zárt.',
     archived: 'Csak nyilvántartási céllal marad meg.',
   };
+  readonly ownerStateOptions: Array<{ value: PalinkaManageableState; label: string }> = [
+    { value: 'active', label: 'Aktív' },
+    { value: 'reserved', label: 'Lefoglalva' },
+    { value: 'partial', label: 'Részben kiadva' },
+    { value: 'exhausted', label: 'Elfogyott' },
+    { value: 'archived', label: 'Archivált' },
+    { value: 'closed', label: 'Lezárva' },
+  ];
 
   private readonly service = inject(PalinkaService);
   private readonly auth = inject(AuthService);
@@ -82,6 +96,7 @@ export class PalinkaListPage {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly items = signal<Palinka[]>([]);
+  readonly updatingStateItemId = signal<string | null>(null);
   readonly search = signal('');
   readonly viewMode = signal<'prioritized' | 'own'>('prioritized');
   readonly currentUser = this.auth.currentUser;
@@ -200,6 +215,11 @@ export class PalinkaListPage {
 
   constructor() {
     this.load();
+    this.startPolling();
+  }
+
+  ngOnDestroy() {
+    this.stopPolling();
   }
 
   private createTimelineWindow() {
@@ -320,15 +340,100 @@ export class PalinkaListPage {
   }
 
   canStartInterest(item: Palinka) {
-    return item.status === 'active' || item.status === 'partial';
+    return !item.workflowClosedAt && (item.status === 'active' || item.status === 'partial');
   }
 
-  statusLabel(status: PalinkaStatus) {
-    return this.statusLabels[status];
+  statusLabel(item: Palinka) {
+    if (item.workflowClosedAt) {
+      return 'Lezárva';
+    }
+
+    return this.statusLabels[item.status];
   }
 
-  statusDescription(status: PalinkaStatus) {
-    return this.statusDescriptions[status];
+  statusDescription(item: Palinka) {
+    if (item.workflowClosedAt) {
+      return 'A tulajdonos lezárta a tételt. 7 napig még látható, utána eltűnik a listából.';
+    }
+
+    if (this.hasFreshInterest(item)) {
+      return 'Van friss érdeklődés a tételre. Ha 48 órán belül nincs lezárás, automatikusan visszaáll zöld aktívra.';
+    }
+
+    return this.statusDescriptions[item.status];
+  }
+
+  statusClass(item: Palinka) {
+    if (item.workflowClosedAt) {
+      return 'status-pill status-pill-exhausted';
+    }
+
+    if (this.hasFreshInterest(item)) {
+      return 'status-pill status-pill-reserved';
+    }
+
+    return `status-pill status-pill-${item.status}`;
+  }
+
+  showFreshInterestInfo(item: Palinka) {
+    return !item.workflowClosedAt && this.hasFreshInterest(item);
+  }
+
+  statusInlineDescription(item: Palinka) {
+    return this.showFreshInterestInfo(item) ? null : this.statusDescription(item);
+  }
+
+  canAdjustState(item: Palinka) {
+    return !!item.isOwnedByCurrentUser;
+  }
+
+  ownerStateValue(item: Palinka): PalinkaManageableState {
+    return item.workflowClosedAt ? 'closed' : item.status;
+  }
+
+  isUpdatingState(itemId: string) {
+    return this.updatingStateItemId() === itemId;
+  }
+
+  private buildUpdatePayloadFromItem(item: Palinka, status: PalinkaStatus): UpdatePalinkaRequest {
+    return {
+      fruitType: item.fruitType,
+      abvPercent: item.abvPercent ?? undefined,
+      volumeLiters: item.volumeLiters,
+      volumeMinLiters: item.volumeMinLiters ?? undefined,
+      volumeMaxLiters: item.volumeMaxLiters ?? undefined,
+      containerCapacityLiters: item.containerCapacityLiters ?? undefined,
+      status,
+      distillationStyle: item.distillationStyle,
+      madeDate: item.madeDate ? new Date(item.madeDate).toISOString() : undefined,
+      notes: item.notes ?? undefined,
+    };
+  }
+
+  updateOwnerState(item: Palinka, rawState: string) {
+    const state = rawState as PalinkaManageableState;
+    if (!this.canAdjustState(item) || this.ownerStateValue(item) === state) {
+      return;
+    }
+
+    this.error.set(null);
+    this.updatingStateItemId.set(item.id);
+    const request = state !== 'closed' && !item.workflowClosedAt
+      ? this.service.update(item.id, this.buildUpdatePayloadFromItem(item, state))
+      : this.service.updateState(item.id, { state });
+
+    request.subscribe({
+      next: (updated) => {
+        this.items.update((current) => current.map((currentItem) => (currentItem.id === updated.id ? updated : currentItem)));
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message ?? 'Nem sikerült frissíteni a tétel állapotát.');
+        this.updatingStateItemId.set(null);
+      },
+      complete: () => {
+        this.updatingStateItemId.set(null);
+      },
+    });
   }
 
   interestStatusLabel(status: ChatInterestStatus) {
@@ -348,9 +453,9 @@ export class PalinkaListPage {
   }
 
   reservationLabel(item: Palinka) {
-    const count = item.interestEntries?.length ?? item.interestCount ?? 0;
-    if (item.currentUserHasConversation) {
-      return 'Beszélgetés megnyitva';
+    const count = this.getOpenInterestCount(item);
+    if (item.workflowClosedAt) {
+      return 'Lezárt tétel';
     }
     if (!this.canStartInterest(item)) {
       return 'Új érdeklődés lezárva';
@@ -366,26 +471,59 @@ export class PalinkaListPage {
       return 'A meglévő beszélgetés bármikor újranyitható.';
     }
 
+    if (item.workflowClosedAt) {
+      return 'A tulajdonos lezárta ezt a tételt.';
+    }
+
     if (!this.canStartInterest(item)) {
-      return this.statusDescription(item.status);
+      return this.statusDescription(item);
     }
 
     return null;
+  }
+
+  showOwnInterestBadge(item: Palinka) {
+    return !!item.currentUserHasConversation && !item.isOwnedByCurrentUser && this.currentUser()?.role !== 'admin';
+  }
+
+  adminInterestEntries(item: Palinka) {
+    return (item.interestEntries ?? []).filter((interest) => !isClosedChatInterestStatus(interest.status));
+  }
+
+  private hasFreshInterest(item: Palinka) {
+    const now = Date.now();
+
+    return (item.interestEntries ?? []).some((interest) => {
+      if (isClosedChatInterestStatus(interest.status)) {
+        return false;
+      }
+
+      const latestMessageAt = new Date(interest.latestMessageAt).getTime();
+      return Number.isFinite(latestMessageAt) && now - latestMessageAt <= this.interestHighlightWindowMs;
+    });
+  }
+
+  private getOpenInterestCount(item: Palinka) {
+    return item.interestCount ?? this.adminInterestEntries(item).length;
   }
 
   describeItem(item: Palinka) {
     return `${item.fruitType} · ${this.formatVolume(item.volumeLiters)} L · ${item.distillationStyle}`;
   }
 
-  load() {
-    this.loading.set(true);
-    this.error.set(null);
+  load(silent = false) {
+    if (!silent) {
+      this.loading.set(true);
+      this.error.set(null);
+    }
 
     this.service
       .list()
       .pipe(
         finalize(() => {
-          this.loading.set(false);
+          if (!silent) {
+            this.loading.set(false);
+          }
         })
       )
       .subscribe({
@@ -393,8 +531,27 @@ export class PalinkaListPage {
           this.items.set(items);
         },
         error: (err) => {
-          this.error.set(err?.error?.message ?? 'Nem sikerült betölteni a listát.');
+          if (!silent) {
+            this.error.set(err?.error?.message ?? 'Nem sikerült betölteni a listát.');
+          }
         },
       });
+  }
+
+  private startPolling() {
+    if (this.pollHandle) {
+      return;
+    }
+
+    this.pollHandle = setInterval(() => {
+      this.load(true);
+    }, 8000);
+  }
+
+  private stopPolling() {
+    if (this.pollHandle) {
+      clearInterval(this.pollHandle);
+      this.pollHandle = null;
+    }
   }
 }

@@ -32,6 +32,8 @@ const palinkaSchema = new mongoose.Schema(
     distillationStyle: { type: String, required: true, trim: true, maxlength: 60 },
     madeDate: { type: Date, required: false },
     notes: { type: String, required: false, trim: true, maxlength: 500 },
+    workflowClosedAt: { type: Date, required: false },
+    workflowClosedThreadId: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatThread', required: false },
     history: { type: [palinkaHistorySchema], default: [] },
 
     sourceFile: { type: String, required: false, trim: true, maxlength: 200 },

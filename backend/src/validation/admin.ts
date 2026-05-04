@@ -11,4 +11,10 @@ export const adminUpdateUserSchema = z
 
 export const transferPalinkaOwnershipSchema = z.object({
   targetUserId: z.string().trim().min(1).max(100),
+  palinkaIds: z
+    .array(z.string().trim().min(1).max(100))
+    .min(1)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: 'A kiválasztott tételek között duplikáció van.',
+    }),
 });

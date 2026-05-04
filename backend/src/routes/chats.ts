@@ -27,6 +27,8 @@ const activeThreadFilter = () => ({ latestMessageAt: { $gte: getChatRetentionCut
 
 const purgeExpiredThreads = () => ChatThreadModel.deleteMany({ latestMessageAt: { $lt: getChatRetentionCutoff() } });
 
+const isPalinkaClosedByWorkflow = (palinka: any) => !!palinka?.workflowClosedAt;
+
 const loadHistoryActor = async (userId: string) => {
   const user = await UserModel.findById(userId).select('username displayName').lean();
 
@@ -141,6 +143,10 @@ chatsRouter.post('/reserve', requireAuth, async (req: AuthenticatedRequest, res)
   const palinka = await PalinkaModel.findById(parsed.data.palinkaId).lean();
   if (!palinka) {
     return res.status(404).json({ message: 'Palinka not found' });
+  }
+
+  if (isPalinkaClosedByWorkflow(palinka)) {
+    return res.status(409).json({ message: 'A tételt a tulajdonos lezárta, ezért már nem fogad új érdeklődést.' });
   }
 
   if (req.userRole !== 'admin' && palinka.ownerId.toString() === req.userId) {
@@ -290,6 +296,28 @@ chatsRouter.post('/:id/status', requireAuth, async (req: AuthenticatedRequest, r
   thread.latestMessageAt = new Date();
   await thread.save();
   await appendInterestStatusHistory(thread, req.userId!, previousStatus, nextStatus);
+
+  if (nextStatus === 'closed') {
+    await PalinkaModel.updateOne(
+      { _id: thread.palinkaId },
+      {
+        $set: {
+          workflowClosedAt: thread.latestMessageAt,
+          workflowClosedThreadId: thread._id,
+        },
+      }
+    );
+  } else if (previousStatus === 'closed') {
+    await PalinkaModel.updateOne(
+      { _id: thread.palinkaId, workflowClosedThreadId: thread._id },
+      {
+        $unset: {
+          workflowClosedAt: '',
+          workflowClosedThreadId: '',
+        },
+      }
+    );
+  }
 
   const populated = await ChatThreadModel.findById(thread._id)
     .populate('palinkaId')

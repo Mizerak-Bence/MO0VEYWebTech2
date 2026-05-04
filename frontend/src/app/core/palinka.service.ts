@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import type { CreatePalinkaRequest, Palinka, UpdatePalinkaRequest } from './models';
+import type { CreatePalinkaRequest, Palinka, UpdatePalinkaRequest, UpdatePalinkaStateRequest } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class PalinkaService {
@@ -21,6 +21,10 @@ export class PalinkaService {
 
   update(id: string, payload: UpdatePalinkaRequest) {
     return this.http.put<Palinka>(`${environment.apiBaseUrl}/palinkas/${id}`, payload);
+  }
+
+  updateState(id: string, payload: UpdatePalinkaStateRequest) {
+    return this.http.patch<Palinka>(`${environment.apiBaseUrl}/palinkas/${id}/state`, payload);
   }
 
   delete(id: string) {

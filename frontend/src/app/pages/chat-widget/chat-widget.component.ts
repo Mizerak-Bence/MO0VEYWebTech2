@@ -27,6 +27,7 @@ export class ChatWidgetComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly chatService = inject(ChatService);
   private pollHandle: ReturnType<typeof setInterval> | null = null;
+  private readonly reopenStatus: ChatInterestStatus = 'contacted';
 
   readonly isOpen = this.chatService.isOpen;
   readonly currentUser = this.auth.currentUser;
@@ -101,8 +102,27 @@ export class ChatWidgetComponent implements OnDestroy {
     return CHAT_INTEREST_STATUS_DESCRIPTIONS[status];
   }
 
+  canReopenThread(thread: ChatThread | null) {
+    return !!thread && !!thread.canManageWorkflow && isClosedChatInterestStatus(thread.status);
+  }
+
+  workflowOptionsFor(thread: ChatThread | null) {
+    return this.workflowOptions.filter(
+      (option) => !(this.canReopenThread(thread) && option.value === this.reopenStatus)
+    );
+  }
+
   canSendMessage(thread: ChatThread | null) {
     return !!thread && !isClosedChatInterestStatus(thread.status);
+  }
+
+  reopenThread() {
+    const thread = this.selectedThread();
+    if (!thread || !this.canReopenThread(thread)) {
+      return;
+    }
+
+    this.updateThreadStatus(this.reopenStatus);
   }
 
   updateThreadStatus(status: ChatInterestStatus) {

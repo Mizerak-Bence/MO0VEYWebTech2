@@ -189,15 +189,67 @@
                   <div class="section-kicker studio-surface__kicker">Tulajdon</div>
                   <h3 class="section-title studio-surface__title">Tételek átruházása</h3>
                   <p class="section-text studio-surface__text">
-                    A kiválasztott felhasználóhoz tartozó pálinkatételek és kapcsolódó chat tulajdonosi oldala átkerül a célfelhasználóhoz.
+                    Válaszd ki, hogy {{ user.displayName }} felhasználótól pontosan mely tételek kerüljenek át a célfelhasználóhoz.
                   </p>
                 </div>
               </div>
 
               <form class="action-form" [formGroup]="transferForm" (ngSubmit)="transferOwnership()">
+                <div class="transfer-summary-card">
+                  <div>
+                    <div class="detail-label">Forrásfelhasználó</div>
+                    <div class="transfer-summary-value">{{ user.displayName }}</div>
+                    <div class="transfer-summary-meta">&#64;{{ user.username }} · {{ user.ownedPalinkaCount }} saját tétel</div>
+                  </div>
+
+                  <div class="transfer-selection-chip">
+                    {{ selectedTransferPalinkaCount() }} / {{ ownedPalinkas().length }} kijelölve
+                  </div>
+                </div>
+
+                <div class="button-row" *ngIf="canTransferOwnership(user)">
+                  <button mat-stroked-button type="button" (click)="toggleTransferItemsPanel()">
+                    {{ showTransferItems() ? 'Tételek elrejtése' : 'Tételek megjelenítése' }}
+                  </button>
+                </div>
+
+                <div class="transfer-list-card" *ngIf="canTransferOwnership(user) && showTransferItems()">
+                  <div class="transfer-list-header">
+                    <div>
+                      <div class="detail-label">Átruházandó tételek</div>
+                      <div class="transfer-summary-meta">Jelöld ki egyenként vagy válaszd ki az összeset.</div>
+                    </div>
+
+                    <button mat-stroked-button type="button" (click)="toggleAllTransferPalinkas()" [disabled]="transferItemsLoading() || !canTransferOwnership(user)">
+                      {{ allOwnedPalinkasSelected() ? 'Kijelölés törlése' : 'Összes kijelölése' }}
+                    </button>
+                  </div>
+
+                  <div class="loading-banner" *ngIf="transferItemsLoading()">Tételek betöltése...</div>
+
+                  <div class="transfer-palinkas" *ngIf="!transferItemsLoading() && ownedPalinkas().length > 0">
+                    <label class="transfer-item" *ngFor="let palinka of ownedPalinkas()" [class.transfer-item-selected]="isTransferPalinkaSelected(palinka.id)">
+                      <input
+                        type="checkbox"
+                        class="transfer-item-checkbox"
+                        [checked]="isTransferPalinkaSelected(palinka.id)"
+                        (change)="toggleTransferPalinka(palinka.id, $any($event.target).checked)"
+                      />
+
+                      <span class="transfer-item-copy">
+                        <span class="transfer-item-name">{{ palinka.name }}</span>
+                        <span class="transfer-item-meta">
+                          {{ palinka.fruitType }} · {{ formatVolume(palinka.volumeLiters) }} L
+                          <span *ngIf="palinka.madeDate"> · {{ palinka.madeDate | date: 'yyyy-MM-dd' }}</span>
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
                 <mat-form-field appearance="outline">
                   <mat-label>Célfelhasználó</mat-label>
-                  <mat-select formControlName="targetUserId" [disabled]="!canManage(user) || user.ownedPalinkaCount === 0">
+                  <mat-select formControlName="targetUserId" [disabled]="!canTransferOwnership(user)">
                     <mat-option *ngFor="let targetUser of targetUsers()" [value]="targetUser.id">
                       {{ targetUser.displayName }} (&#64;{{ targetUser.username }})
                     </mat-option>
@@ -206,7 +258,7 @@
                 </mat-form-field>
 
                 <div class="button-row">
-                  <button mat-flat-button color="primary" type="submit" [disabled]="transferring() || !canManage(user) || user.ownedPalinkaCount === 0">
+                  <button mat-flat-button color="primary" type="submit" [disabled]="transferring() || !canTransferOwnership(user) || selectedTransferPalinkaCount() === 0">
                     Tulajdon átruházása
                   </button>
                 </div>

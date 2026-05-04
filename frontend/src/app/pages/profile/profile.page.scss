@@ -40,7 +40,7 @@
 }
 
 .hero-panel {
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  grid-template-columns: minmax(0, 1.16fr) minmax(340px, 0.84fr);
   align-items: start;
 }
 
@@ -51,13 +51,13 @@
 }
 
 .hero-title {
-  max-width: 9ch;
-  font-size: clamp(2.8rem, 5.8vw, 4.6rem);
+  max-width: 9.5ch;
+  font-size: clamp(2.5rem, 5.1vw, 4.2rem);
 }
 
 .hero-text {
-  max-width: 34rem;
-  font-size: clamp(1rem, 1.35vw, 1.18rem);
+  max-width: 31rem;
+  font-size: clamp(0.98rem, 1.2vw, 1.08rem);
 }
 
 .hero-facts {
@@ -100,26 +100,16 @@
 
 .hero-summary {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   align-content: start;
 }
 
 .summary-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
-}
-
-.summary-card-actions {
-  display: grid;
-  gap: 12px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
 }
 
 .summary-card,
@@ -133,12 +123,13 @@
 }
 
 .summary-card {
-  padding: 18px 20px;
+  padding: 16px 18px;
 }
 
 .summary-card-primary {
+  grid-column: 1 / -1;
   background: linear-gradient(135deg, rgba(140, 82, 30, 0.14), rgba(255, 249, 241, 0.84));
-  min-height: 112px;
+  min-height: 0;
 }
 
 .summary-label {
@@ -159,16 +150,12 @@
 }
 
 .summary-card-compact {
-  min-height: 100%;
+  min-height: 128px;
+  display: grid;
+  align-content: start;
 }
 
 .back-link {
-  border-radius: 16px;
-}
-
-.summary-actions a[mat-stroked-button],
-.summary-actions a[mat-flat-button] {
-  min-height: 46px;
   border-radius: 16px;
 }
 
@@ -294,6 +281,10 @@
     grid-template-columns: 1fr;
   }
 
+  .hero-summary {
+    grid-template-columns: 1fr;
+  }
+
   .hero-title,
   .hero-text,
   .system-admin-note {
@@ -302,15 +293,17 @@
 }
 
 @media (max-width: 720px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
-
   .toolbar-user,
   .summary-actions,
   .hero-facts {
     margin-right: 0;
     text-align: left;
+  }
+
+  .summary-actions a[mat-stroked-button],
+  .summary-actions a[mat-flat-button] {
+    min-width: 0;
+    width: 100%;
   }
 
   .password-verify-row {
