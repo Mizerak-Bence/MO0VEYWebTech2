@@ -1,0 +1,220 @@
+<div class="page studio-surface">
+  <div class="page-shell studio-surface__shell">
+    <div class="page-noise studio-surface__noise"></div>
+    <div class="page-sheen studio-surface__sheen"></div>
+
+    <div class="page-content studio-surface__content">
+      <section class="hero-panel studio-surface__hero">
+        <div class="hero-copy">
+          <div class="hero-kicker studio-surface__kicker">Admin konzol</div>
+          <h1 class="hero-title studio-surface__title">Felhasználók, szerepkörök és tulajdonviszonyok</h1>
+          <p class="hero-text studio-surface__text">
+            Egy külön kezelőnézet a valódi admin munkára: jogosultságváltás, fióktiltás és a tételek rendezett átadása,
+            hogy a napi operáció ne a profiloldalra vagy a listára szoruljon rá.
+          </p>
+
+          <div class="hero-actions">
+            <a mat-stroked-button routerLink="/palinkas">Vissza a készlethez</a>
+            <a mat-button routerLink="/profile">Profil</a>
+          </div>
+        </div>
+
+        <div class="hero-side">
+          <div class="hero-side-card">
+            <div class="hero-side-label">Bejelentkezve</div>
+            <div class="hero-side-value">{{ currentUser()?.displayName ?? 'Ismeretlen admin' }}</div>
+            <div class="hero-side-detail">{{ currentUser()?.username ? '@' + currentUser()?.username : 'Aktív admin munkamenet' }}</div>
+          </div>
+
+          <div class="hero-side-card hero-side-card-accent">
+            <div class="hero-side-label">Kiválasztott felhasználó</div>
+            <div class="hero-side-value">{{ selectedUserDisplayName() }}</div>
+            <div class="hero-side-detail">{{ selectedUserOwnedPalinkaCount() }} tétel és {{ selectedUserActiveInterestCount() }} aktív egyeztetés</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="stats-grid">
+        <mat-card class="stat-card">
+          <div class="stat-label">Felhasználók</div>
+          <div class="stat-value">{{ stats().totalUsers }}</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Aktív adminok</div>
+          <div class="stat-value">{{ stats().adminCount }}</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Letiltott fiókok</div>
+          <div class="stat-value">{{ stats().disabledUsers }}</div>
+        </mat-card>
+
+        <mat-card class="stat-card">
+          <div class="stat-label">Tételek összesen</div>
+          <div class="stat-value">{{ stats().totalPalinkas }}</div>
+        </mat-card>
+      </div>
+
+      <div class="error-banner" *ngIf="error()">{{ error() }}</div>
+      <div class="success-banner" *ngIf="success()">{{ success() }}</div>
+      <div class="loading-banner" *ngIf="loading()">Felhasználók betöltése...</div>
+
+      <div class="management-grid" *ngIf="!loading()">
+        <mat-card class="user-rail-card">
+          <mat-card-content>
+            <div class="card-header">
+              <div>
+                <div class="section-kicker studio-surface__kicker">Állomány</div>
+                <h2 class="section-title studio-surface__title">Felhasználók</h2>
+              </div>
+
+              <button mat-stroked-button type="button" (click)="loadUsers(selectedUserId() ?? undefined)">
+                <mat-icon>refresh</mat-icon>
+                Lista frissítése
+              </button>
+            </div>
+
+            <div class="empty-state" *ngIf="users().length === 0">Nincs megjeleníthető felhasználó.</div>
+
+            <div class="user-rail" *ngIf="users().length > 0">
+              <button
+                type="button"
+                class="user-card"
+                *ngFor="let user of users()"
+                [class.user-card-selected]="selectedUserId() === user.id"
+                (click)="selectUser(user.id)"
+              >
+                <div class="user-card-top">
+                  <div>
+                    <div class="user-card-name">{{ user.displayName }}</div>
+                    <div class="user-card-meta">&#64;{{ user.username }}</div>
+                  </div>
+
+                  <div class="user-card-count">{{ user.ownedPalinkaCount }}</div>
+                </div>
+
+                <div class="user-card-tags">
+                  <span class="badge badge-role" [class.badge-role-admin]="user.role === 'admin'">{{ roleLabel(user.role) }}</span>
+                  <span class="badge" [class.badge-disabled]="user.isDisabled">{{ statusLabel(user) }}</span>
+                  <span class="badge badge-system" *ngIf="user.isSystemAdmin">Fix</span>
+                  <span class="badge badge-self" *ngIf="isCurrentUser(user)">Saját</span>
+                </div>
+
+                <div class="user-card-foot">
+                  <span>{{ user.activeInterestCount }} aktív egyeztetés</span>
+                  <span>{{ user.createdAt | date: 'yyyy-MM-dd' }}</span>
+                </div>
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <div class="detail-column" *ngIf="selectedUser() as user">
+          <mat-card class="detail-card">
+            <mat-card-content>
+              <div class="card-header card-header-stack">
+                <div>
+                  <div class="section-kicker studio-surface__kicker">Részletek</div>
+                  <h2 class="section-title studio-surface__title">{{ user.displayName }}</h2>
+                  <p class="section-text studio-surface__text">&#64;{{ user.username }} felhasználó admin kezelőlapja.</p>
+                </div>
+
+                <div class="detail-badges">
+                  <span class="badge badge-role" [class.badge-role-admin]="user.role === 'admin'">{{ roleLabel(user.role) }}</span>
+                  <span class="badge" [class.badge-disabled]="user.isDisabled">{{ statusLabel(user) }}</span>
+                  <span class="badge badge-system" *ngIf="user.isSystemAdmin">Rendszerfiók</span>
+                  <span class="badge badge-self" *ngIf="isCurrentUser(user)">Te vagy</span>
+                </div>
+              </div>
+
+              <div class="detail-metrics">
+                <div class="detail-metric">
+                  <div class="detail-label">Saját tételek</div>
+                  <div class="detail-value">{{ user.ownedPalinkaCount }}</div>
+                </div>
+
+                <div class="detail-metric">
+                  <div class="detail-label">Aktív egyeztetések</div>
+                  <div class="detail-value">{{ user.activeInterestCount }}</div>
+                </div>
+
+                <div class="detail-metric">
+                  <div class="detail-label">Létrehozva</div>
+                  <div class="detail-value detail-value-small">{{ user.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+                </div>
+              </div>
+
+              <div class="detail-note" *ngIf="!canManage(user)">
+                {{ user.isSystemAdmin ? 'A rendszer admin fiókja fixen védett, itt nem módosítható.' : isCurrentUser(user) ? 'A saját fiókodat ebből a konzolból nem lehet letiltani vagy lefokozni.' : 'Ehhez a fiókhoz itt nincs admin művelet.' }}
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="action-card">
+            <mat-card-content>
+              <div class="card-header card-header-stack">
+                <div>
+                  <div class="section-kicker studio-surface__kicker">Jogosultság</div>
+                  <h3 class="section-title studio-surface__title">Szerepkör és fiókállapot</h3>
+                </div>
+              </div>
+
+              <form class="action-form" [formGroup]="roleForm" (ngSubmit)="saveRole()">
+                <mat-form-field appearance="outline">
+                  <mat-label>Szerepkör</mat-label>
+                  <mat-select formControlName="role" [disabled]="!canManage(user)">
+                    <mat-option *ngFor="let option of roleOptions" [value]="option.value">{{ option.label }}</mat-option>
+                  </mat-select>
+                </mat-form-field>
+
+                <div class="role-help">
+                  {{ roleOptions.find(option => option.value === roleForm.controls.role.value)?.description }}
+                </div>
+
+                <div class="button-row">
+                  <button mat-flat-button color="primary" type="submit" [disabled]="saving() || !canManage(user)">Szerepkör mentése</button>
+                  <button mat-stroked-button type="button" (click)="toggleDisabled()" [disabled]="saving() || !canManage(user)">
+                    {{ user.isDisabled ? 'Fiók aktiválása' : 'Fiók letiltása' }}
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card class="action-card">
+            <mat-card-content>
+              <div class="card-header card-header-stack">
+                <div>
+                  <div class="section-kicker studio-surface__kicker">Tulajdon</div>
+                  <h3 class="section-title studio-surface__title">Tételek átruházása</h3>
+                  <p class="section-text studio-surface__text">
+                    A kiválasztott felhasználóhoz tartozó pálinkatételek és kapcsolódó chat tulajdonosi oldala átkerül a célfelhasználóhoz.
+                  </p>
+                </div>
+              </div>
+
+              <form class="action-form" [formGroup]="transferForm" (ngSubmit)="transferOwnership()">
+                <mat-form-field appearance="outline">
+                  <mat-label>Célfelhasználó</mat-label>
+                  <mat-select formControlName="targetUserId" [disabled]="!canManage(user) || user.ownedPalinkaCount === 0">
+                    <mat-option *ngFor="let targetUser of targetUsers()" [value]="targetUser.id">
+                      {{ targetUser.displayName }} (&#64;{{ targetUser.username }})
+                    </mat-option>
+                  </mat-select>
+                  <mat-hint *ngIf="user.ownedPalinkaCount === 0">Ehhez a felhasználóhoz jelenleg nincs saját tétel.</mat-hint>
+                </mat-form-field>
+
+                <div class="button-row">
+                  <button mat-flat-button color="primary" type="submit" [disabled]="transferring() || !canManage(user) || user.ownedPalinkaCount === 0">
+                    Tulajdon átruházása
+                  </button>
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

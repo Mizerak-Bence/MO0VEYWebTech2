@@ -3,6 +3,7 @@ import path from 'node:path';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import { adminRouter } from './routes/admin';
 import { config } from './config';
 import { authRouter } from './routes/auth';
 import { chatsRouter } from './routes/chats';
@@ -22,6 +23,7 @@ app.use(
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.use('/api/admin', adminRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/chats', chatsRouter);
 app.use('/api/palinkas', palinkasRouter);

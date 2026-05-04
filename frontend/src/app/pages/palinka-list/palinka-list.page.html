@@ -21,6 +21,10 @@
           <mat-icon>refresh</mat-icon>
           Frissítés
         </button>
+        <a mat-button routerLink="/admin/users" *ngIf="currentUser()?.role === 'admin'">
+          <mat-icon>manage_accounts</mat-icon>
+          Felhasználók
+        </a>
         <a mat-button routerLink="/profile">
           <mat-icon>person</mat-icon>
           Profil
@@ -78,6 +82,65 @@
         </mat-card>
       </div>
 
+      <mat-card class="list-card trend-card">
+        <mat-card-content>
+          <div class="list-header trend-header">
+            <div>
+              <div class="section-kicker studio-surface__kicker">Heti dashboard</div>
+              <h2 class="section-title studio-surface__title">7 napos aktivitási idősor</h2>
+              <p class="section-text studio-surface__text">
+                Új tételek, érdeklődési aktivitás és lezárt egyeztetések a jelenlegi szűrés és látható adatok alapján.
+              </p>
+            </div>
+
+            <div class="trend-legend">
+              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-inventory"></span> Készletbővülés</span>
+              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-interest"></span> Érdeklődések</span>
+              <span class="trend-legend-item"><span class="trend-swatch trend-swatch-closure"></span> Lezárások</span>
+            </div>
+          </div>
+
+          <div class="trend-summary">
+            <div class="trend-summary-card">
+              <div class="trend-summary-label">Új tételek</div>
+              <div class="trend-summary-value">{{ dashboardTotals().inventory }}</div>
+            </div>
+
+            <div class="trend-summary-card">
+              <div class="trend-summary-label">Érdeklődési aktivitás</div>
+              <div class="trend-summary-value">{{ dashboardTotals().interests }}</div>
+            </div>
+
+            <div class="trend-summary-card">
+              <div class="trend-summary-label">Lezárt egyeztetések</div>
+              <div class="trend-summary-value">{{ dashboardTotals().closures }}</div>
+            </div>
+
+            <div class="trend-summary-card">
+              <div class="trend-summary-label">Még aktív érdeklődések</div>
+              <div class="trend-summary-value">{{ dashboardTotals().activeInterests }}</div>
+            </div>
+          </div>
+
+          <div class="trend-empty" *ngIf="!hasDashboardActivity()">
+            Az elmúlt 7 napban a jelenlegi nézet alapján még nincs új tétel, érdeklődés vagy lezárás.
+          </div>
+
+          <div class="trend-chart" *ngIf="hasDashboardActivity()">
+            <div class="trend-day" *ngFor="let point of dashboardSeries()">
+              <div class="trend-bars">
+                <div class="trend-bar trend-bar-inventory" [style.height.%]="point.inventoryHeight" [attr.aria-label]="'Új tételek: ' + point.inventory"></div>
+                <div class="trend-bar trend-bar-interest" [style.height.%]="point.interestsHeight" [attr.aria-label]="'Érdeklődések: ' + point.interests"></div>
+                <div class="trend-bar trend-bar-closure" [style.height.%]="point.closuresHeight" [attr.aria-label]="'Lezárások: ' + point.closures"></div>
+              </div>
+              <div class="trend-values">{{ point.inventory }} / {{ point.interests }} / {{ point.closures }}</div>
+              <div class="trend-day-label">{{ point.dayLabel }}</div>
+              <div class="trend-date-label">{{ point.dateLabel }}</div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
       <mat-card class="list-card">
         <mat-card-content>
           <div class="list-header">
@@ -110,6 +173,13 @@
               <a mat-flat-button color="primary" routerLink="/palinkas/new">
                 <mat-icon>add</mat-icon>
                 Új tétel
+              </a>
+            </div>
+
+            <div class="actions-row" *ngIf="currentUser()?.role === 'admin'">
+              <a mat-stroked-button routerLink="/admin/users">
+                <mat-icon>shield_person</mat-icon>
+                Admin felhasználókezelés
               </a>
             </div>
           </div>
@@ -160,15 +230,24 @@
                 <td mat-cell *matCellDef="let p">{{ p.distillationStyle }}</td>
               </ng-container>
 
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Állapot</th>
+                <td mat-cell *matCellDef="let p">
+                  <span class="status-pill" [class]="'status-pill status-pill-' + p.status">{{ statusLabel(p.status) }}</span>
+                  <div class="cell-secondary">{{ statusDescription(p.status) }}</div>
+                </td>
+              </ng-container>
+
               <ng-container matColumnDef="reservation">
                 <th mat-header-cell *matHeaderCellDef>Érdeklődés</th>
                 <td mat-cell *matCellDef="let p">
                   <div class="cell-primary">{{ reservationLabel(p) }}</div>
+                  <div class="cell-secondary" *ngIf="reservationHint(p)">{{ reservationHint(p) }}</div>
                   <div class="interest-list" *ngIf="p.interestEntries?.length">
                     <div class="interest-item" *ngFor="let interest of p.interestEntries">
                       <div class="interest-name">{{ interest.requester.displayName }}</div>
                       <div class="interest-meta">
-                        {{ interest.status === 'requested' ? 'Új érdeklődés' : 'Aktív beszélgetés' }} · törlés:
+                        {{ interestStatusLabel(interest.status) }} · {{ interestStatusDescription(interest.status) }} · törlés:
                         {{ interest.expiresAt | date: 'MM-dd HH:mm' }}
                       </div>
                     </div>

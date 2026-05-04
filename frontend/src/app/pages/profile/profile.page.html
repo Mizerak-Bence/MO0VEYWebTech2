@@ -5,6 +5,33 @@
 
     <ng-container *ngIf="user() as currentUser">
       <div class="page-content studio-surface__content">
+        <mat-toolbar class="toolbar">
+          <div>
+            <div class="toolbar-title">Pálinka Nyilvántartó</div>
+            <div class="toolbar-subtitle">Profil, hozzáférés és jelszókezelés</div>
+          </div>
+
+          <span class="toolbar-spacer"></span>
+
+          <div class="toolbar-user">
+            <div class="toolbar-user-name">{{ currentUser.displayName }}</div>
+            <div class="toolbar-user-role">{{ currentUser.role === 'admin' ? 'Rendszer admin' : 'Felhasználó' }}</div>
+          </div>
+
+          <a mat-button routerLink="/admin/users" *ngIf="currentUser.role === 'admin'">
+            <mat-icon>manage_accounts</mat-icon>
+            Felhasználók
+          </a>
+          <a mat-button routerLink="/palinkas">
+            <mat-icon>inventory_2</mat-icon>
+            Készlet
+          </a>
+          <button mat-button type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            Kilépés
+          </button>
+        </mat-toolbar>
+
         <section class="hero-panel studio-surface__hero">
           <div class="hero-copy">
             <div class="hero-kicker studio-surface__kicker">Fiókkezelés</div>
@@ -14,6 +41,12 @@
               kártyák és elkülönített profil-biztonság blokkok.
             </p>
 
+            <div class="hero-facts">
+              <div class="hero-fact-chip">&#64;{{ currentUser.username }}</div>
+              <div class="hero-fact-chip">{{ roleLabel() }}</div>
+              <div class="hero-fact-chip">{{ currentUser.createdAt | date: 'yyyy-MM-dd' }}</div>
+            </div>
+
             <div class="system-admin-note" *ngIf="isSystemAdmin()">
               Ez egy beépített rendszer admin fiók. A felhasználónév, a kijelzett név és a jelszó fixen a kódban van definiálva.
             </div>
@@ -21,9 +54,9 @@
 
           <div class="hero-summary">
             <div class="summary-card summary-card-primary">
-              <div class="summary-label">Felhasználónév</div>
-              <div class="summary-value">{{ currentUser.username }}</div>
-              <div class="summary-hint">Ezzel jelentkezel be.</div>
+              <div class="summary-label">Aktív profil</div>
+              <div class="summary-value">{{ currentUser.displayName }}</div>
+              <div class="summary-hint">{{ currentUser.username }} néven jelentkeztél be.</div>
             </div>
 
             <div class="summary-grid">
@@ -40,7 +73,13 @@
               </div>
             </div>
 
-            <a mat-stroked-button routerLink="/palinkas" class="back-link">Vissza a listához</a>
+            <div class="summary-card summary-card-actions">
+              <div class="summary-label">Gyors műveletek</div>
+              <div class="summary-actions">
+                <a mat-stroked-button routerLink="/palinkas" class="back-link">Vissza a listához</a>
+                <a mat-flat-button color="primary" routerLink="/admin/users" *ngIf="currentUser.role === 'admin'">Admin konzol</a>
+              </div>
+            </div>
           </div>
         </section>
 

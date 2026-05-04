@@ -13,6 +13,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 
 import { PalinkaService } from '../../core/palinka.service';
+import { type Palinka, type PalinkaHistoryEntry, type PalinkaStatus } from '../../core/models';
 
 @Component({
   selector: 'app-palinka-add-page',
@@ -33,6 +34,13 @@ import { PalinkaService } from '../../core/palinka.service';
   styleUrl: './palinka-add.page.scss',
 })
 export class PalinkaAddPage {
+  readonly statusOptions: Array<{ value: PalinkaStatus; label: string; hint: string }> = [
+    { value: 'active', label: 'Aktív', hint: 'Szabadon elérhető, új érdeklődést fogadhat.' },
+    { value: 'reserved', label: 'Lefoglalva', hint: 'Már félretett tétel, új érdeklődés nem indítható.' },
+    { value: 'partial', label: 'Részben kiadva', hint: 'Még van belőle, ezért további érdeklődés fogadható.' },
+    { value: 'exhausted', label: 'Elfogyott', hint: 'Készlethiányos, ezért nem fogad új érdeklődést.' },
+    { value: 'archived', label: 'Archivált', hint: 'Történeti vagy lezárt tétel, csak nyilvántartási célra marad.' },
+  ];
   readonly defaultDistillationOption = 'Kétlépcsős lepárlás';
   readonly distillationOptions = [
     'Kétlépcsős lepárlás',
@@ -49,10 +57,15 @@ export class PalinkaAddPage {
   readonly error = signal<string | null>(null);
   readonly loading = signal(false);
   readonly initialLoading = signal(false);
+  readonly currentPalinka = signal<Palinka | null>(null);
   readonly palinkaId = this.route.snapshot.paramMap.get('id');
   readonly isEditMode = computed(() => !!this.palinkaId);
   readonly pageTitle = computed(() => (this.isEditMode() ? 'Pálinka szerkesztése' : 'Új pálinka tétel'));
   readonly submitLabel = computed(() => (this.isEditMode() ? 'Mentés' : 'Létrehozás'));
+  readonly selectedStatusHint = computed(
+    () => this.statusOptions.find((option) => option.value === this.form.controls.status.value)?.hint ?? ''
+  );
+  readonly historyEntries = computed<PalinkaHistoryEntry[]>(() => this.currentPalinka()?.history ?? []);
 
   readonly form = this.fb.group({
     fruitType: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
@@ -61,6 +74,7 @@ export class PalinkaAddPage {
     volumeMinLiters: [null as number | null, [Validators.min(0)]],
     volumeMaxLiters: [null as number | null, [Validators.min(0)]],
     containerCapacityLiters: [null as number | null, [Validators.min(0)]],
+    status: ['active' as PalinkaStatus, [Validators.required]],
     distillationPreset: [this.defaultDistillationOption, [Validators.required]],
     distillationCustom: ['', [Validators.maxLength(60)]],
     madeDate: [null as Date | null],
@@ -79,6 +93,7 @@ export class PalinkaAddPage {
         )
         .subscribe({
           next: (palinka) => {
+            this.currentPalinka.set(palinka);
             const preset = this.distillationOptions.includes(palinka.distillationStyle)
               ? palinka.distillationStyle
               : this.customDistillationOption;
@@ -90,6 +105,7 @@ export class PalinkaAddPage {
               volumeMinLiters: palinka.volumeMinLiters ?? null,
               volumeMaxLiters: palinka.volumeMaxLiters ?? null,
               containerCapacityLiters: palinka.containerCapacityLiters ?? null,
+              status: palinka.status,
               distillationPreset: preset,
               distillationCustom: preset === this.customDistillationOption ? palinka.distillationStyle : '',
               madeDate: palinka.madeDate ? new Date(palinka.madeDate) : null,
@@ -129,6 +145,7 @@ export class PalinkaAddPage {
       volumeMaxLiters: value.volumeMaxLiters == null ? undefined : Number(value.volumeMaxLiters),
       containerCapacityLiters:
         value.containerCapacityLiters == null ? undefined : Number(value.containerCapacityLiters),
+      status: value.status!,
       distillationStyle: this.getDistillationStyle(),
       madeDate: value.madeDate ? value.madeDate.toISOString() : undefined,
       notes: value.notes?.trim() ? value.notes.trim() : undefined,

@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import type { ChatThread } from './models';
+import type { ChatInterestStatus, ChatThread } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -29,6 +29,14 @@ export class ChatService {
 
   sendMessage(threadId: string, text: string) {
     return this.http.post<{ thread: ChatThread }>(`${environment.apiBaseUrl}/chats/${threadId}/messages`, { text }).pipe(
+      tap((response) => {
+        this.openThread(response.thread.id);
+      })
+    );
+  }
+
+  updateStatus(threadId: string, status: ChatInterestStatus) {
+    return this.http.post<{ thread: ChatThread }>(`${environment.apiBaseUrl}/chats/${threadId}/status`, { status }).pipe(
       tap((response) => {
         this.openThread(response.thread.id);
       })

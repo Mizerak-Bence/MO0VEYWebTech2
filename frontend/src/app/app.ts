@@ -32,6 +32,6 @@ export class App implements OnDestroy {
   }
 
   private updateChatVisibility(url: string) {
-    this.showChatWidget.set(!(url.startsWith('/login') || url.startsWith('/register')));
+    this.showChatWidget.set(!(url.startsWith('/login') || url.startsWith('/register') || url.startsWith('/admin')));
   }
 }

@@ -7,7 +7,14 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../core/auth.service';
 import { ChatService } from '../../core/chat.service';
-import type { ChatThread } from '../../core/models';
+import {
+  CHAT_INTEREST_STATUS_DESCRIPTIONS,
+  CHAT_INTEREST_STATUS_LABELS,
+  CHAT_INTEREST_STATUS_VALUES,
+  isClosedChatInterestStatus,
+  type ChatInterestStatus,
+  type ChatThread,
+} from '../../core/models';
 
 @Component({
   selector: 'app-chat-widget',
@@ -26,8 +33,13 @@ export class ChatWidgetComponent implements OnDestroy {
   readonly threads = signal<ChatThread[]>([]);
   readonly loading = signal(false);
   readonly sending = signal(false);
+  readonly updatingStatus = signal(false);
   readonly error = signal<string | null>(null);
   readonly draftMessage = signal('');
+  readonly workflowOptions = CHAT_INTEREST_STATUS_VALUES.map((status) => ({
+    value: status,
+    label: CHAT_INTEREST_STATUS_LABELS[status],
+  }));
   readonly markingSeenThreadId = signal<string | null>(null);
   readonly selectedThreadId = this.chatService.selectedThreadId;
   readonly selectedThread = computed(
@@ -78,13 +90,47 @@ export class ChatWidgetComponent implements OnDestroy {
   }
 
   threadStatusLabel(thread: ChatThread) {
-    return thread.unreadCount > 0 ? `${thread.unreadCount} új üzenet` : 'Láttam';
+    return thread.unreadCount > 0 ? `${thread.unreadCount} új üzenet` : 'Nincs olvasatlan';
+  }
+
+  workflowLabel(status: ChatInterestStatus) {
+    return CHAT_INTEREST_STATUS_LABELS[status];
+  }
+
+  workflowDescription(status: ChatInterestStatus) {
+    return CHAT_INTEREST_STATUS_DESCRIPTIONS[status];
+  }
+
+  canSendMessage(thread: ChatThread | null) {
+    return !!thread && !isClosedChatInterestStatus(thread.status);
+  }
+
+  updateThreadStatus(status: ChatInterestStatus) {
+    const thread = this.selectedThread();
+    if (!thread || !thread.canManageWorkflow || thread.status === status) {
+      return;
+    }
+
+    this.updatingStatus.set(true);
+    this.error.set(null);
+    this.chatService.updateStatus(thread.id, status).subscribe({
+      next: (response) => {
+        this.upsertThread(response.thread);
+      },
+      error: (err) => {
+        this.error.set(err?.error?.message ?? 'Nem sikerült módosítani az érdeklődés állapotát.');
+        this.updatingStatus.set(false);
+      },
+      complete: () => {
+        this.updatingStatus.set(false);
+      },
+    });
   }
 
   sendMessage() {
     const thread = this.selectedThread();
     const text = this.draftMessage().trim();
-    if (!thread || !text) {
+    if (!thread || !text || !this.canSendMessage(thread)) {
       return;
     }
 

@@ -1,0 +1,14 @@
+import { z } from 'zod';
+
+export const adminUpdateUserSchema = z
+  .object({
+    role: z.enum(['user', 'admin']).optional(),
+    isDisabled: z.boolean().optional(),
+  })
+  .refine((value) => value.role !== undefined || value.isDisabled !== undefined, {
+    message: 'At least one field must be provided.',
+  });
+
+export const transferPalinkaOwnershipSchema = z.object({
+  targetUserId: z.string().trim().min(1).max(100),
+});

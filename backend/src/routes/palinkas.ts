@@ -1,10 +1,18 @@
 import { Router } from 'express';
+import { normalizeChatThreadStatus } from '../chat-thread-status';
 import { PalinkaModel } from '../models/Palinka';
+import { UserModel } from '../models/User';
 import { requireAuth, type AuthenticatedRequest } from '../middleware/auth';
 import { createPalinkaSchema } from '../validation/palinka';
 import { buildPalinkaName } from '../palinka-name';
 import { ChatThreadModel } from '../models/ChatThread';
 import { getChatRetentionCutoff, getChatThreadExpiresAt } from '../chat-retention';
+import { getPalinkaStatusLabel, normalizePalinkaStatus } from '../palinka-status';
+import {
+  createPalinkaHistoryEntry,
+  describePalinkaStatusChange,
+  palinkaHistoryComparableFields,
+} from '../palinka-history';
 
 export const palinkasRouter = Router();
 
@@ -22,6 +30,61 @@ const serializeUserSummary = (user: any) => ({
   displayName: user?.displayName ?? user?.username ?? '',
 });
 
+const serializeHistoryEntry = (entry: any) => ({
+  id: getId(entry?._id),
+  type: entry?.type,
+  title: entry?.title ?? '',
+  description: entry?.description ?? null,
+  actorDisplayName: entry?.actorDisplayName ?? 'Ismeretlen felhasználó',
+  actorUsername: entry?.actorUsername ?? null,
+  changedFields: entry?.changedFields ?? [],
+  status: entry?.status ?? null,
+  createdAt: entry?.createdAt,
+});
+
+const buildFallbackHistoryEntries = (palinka: any) => {
+  if (!palinka?.createdAt) {
+    return [];
+  }
+
+  return [
+    {
+      id: `legacy-${getId(palinka?._id)}`,
+      type: 'created',
+      title: 'Tétel korábban létrehozva',
+      description: 'Eredeti létrehozási esemény az audit trail bevezetése előttről.',
+      actorDisplayName: palinka?.ownerId?.displayName ?? palinka?.ownerId?.username ?? 'Ismeretlen felhasználó',
+      actorUsername: palinka?.ownerId?.username ?? null,
+      changedFields: [],
+      status: normalizePalinkaStatus(palinka?.status),
+      createdAt: palinka.createdAt,
+    },
+  ];
+};
+
+const getComparableValue = (value: unknown) => {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return value ?? null;
+};
+
+const getChangedFields = (current: Record<string, unknown>, next: Record<string, unknown>) =>
+  palinkaHistoryComparableFields.filter(
+    (field) => getComparableValue(current[field]) !== getComparableValue(next[field])
+  );
+
+const loadHistoryActor = async (userId: string) => {
+  const user = await UserModel.findById(userId).select('username displayName').lean();
+
+  return {
+    id: user?._id ?? userId,
+    username: user?.username ?? '',
+    displayName: user?.displayName ?? user?.username ?? 'Ismeretlen felhasználó',
+  };
+};
+
 const activeThreadFilter = () => ({ latestMessageAt: { $gte: getChatRetentionCutoff() } });
 
 const purgeExpiredThreads = () => ChatThreadModel.deleteMany({ latestMessageAt: { $lt: getChatRetentionCutoff() } });
@@ -38,26 +101,44 @@ const normalizePayload = (input: Record<string, unknown>) => {
   return body;
 };
 
-const serializePalinka = (p: any) => ({
-  id: getId(p._id),
-  ownerId: getId(p.ownerId),
-  name: p.name,
-  fruitType: p.fruitType,
-  abvPercent: p.abvPercent ?? null,
-  volumeLiters: p.volumeLiters,
-  volumeMinLiters: p.volumeMinLiters ?? null,
-  volumeMaxLiters: p.volumeMaxLiters ?? null,
-  containerCapacityLiters: p.containerCapacityLiters ?? null,
-  distillationStyle: p.distillationStyle,
-  madeDate: p.madeDate ?? null,
-  notes: p.notes ?? null,
-  createdAt: p.createdAt,
-});
+const serializePalinka = (p: any, options?: { includeHistory?: boolean }) => {
+  const includeHistory = !!options?.includeHistory;
+  const serializedHistory = includeHistory
+    ? (Array.isArray(p.history) && p.history.length > 0
+        ? [...p.history]
+            .map((entry) => serializeHistoryEntry(entry))
+            .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+        : buildFallbackHistoryEntries(p))
+    : undefined;
+
+  return {
+    id: getId(p._id),
+    ownerId: getId(p.ownerId),
+    name: p.name,
+    fruitType: p.fruitType,
+    abvPercent: p.abvPercent ?? null,
+    volumeLiters: p.volumeLiters,
+    volumeMinLiters: p.volumeMinLiters ?? null,
+    volumeMaxLiters: p.volumeMaxLiters ?? null,
+    containerCapacityLiters: p.containerCapacityLiters ?? null,
+    status: normalizePalinkaStatus(p.status),
+    distillationStyle: p.distillationStyle,
+    madeDate: p.madeDate ?? null,
+    notes: p.notes ?? null,
+    createdAt: p.createdAt,
+    history: serializedHistory,
+  };
+};
 
 const manageFilter = (req: AuthenticatedRequest) =>
   req.userRole === 'admin' ? {} : { ownerId: req.userId! };
 
-const withOwnerAndChatMeta = async (items: any[], currentUserId: string, currentUserRole: 'user' | 'admin') => {
+const withOwnerAndChatMeta = async (
+  items: any[],
+  currentUserId: string,
+  currentUserRole: 'user' | 'admin',
+  includeHistory = false
+) => {
   const palinkaIds = items.map((item) => item._id);
 
   await purgeExpiredThreads();
@@ -85,14 +166,14 @@ const withOwnerAndChatMeta = async (items: any[], currentUserId: string, current
       requester: serializeUserSummary(thread.requesterId),
       latestMessageAt: thread.latestMessageAt,
       expiresAt: getChatThreadExpiresAt(thread.latestMessageAt),
-      status: thread.status,
+      status: normalizeChatThreadStatus(thread.status),
     });
     interestEntriesByPalinka.set(palinkaId, currentEntries);
   }
 
   return items
     .map((item) => {
-      const serialized = serializePalinka(item);
+      const serialized = serializePalinka(item, { includeHistory });
       const owner = item.ownerId && typeof item.ownerId === 'object'
         ? {
             id: getId(item.ownerId),
@@ -128,7 +209,7 @@ const withOwnerAndChatMeta = async (items: any[], currentUserId: string, current
 };
 
 palinkasRouter.get('/', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const items = await PalinkaModel.find({}).populate('ownerId', 'username displayName').lean();
+  const items = await PalinkaModel.find({}).select('-history').populate('ownerId', 'username displayName').lean();
 
   return res.json(await withOwnerAndChatMeta(items, req.userId!, req.userRole!));
 });
@@ -140,7 +221,7 @@ palinkasRouter.get('/:id', requireAuth, async (req: AuthenticatedRequest, res) =
     return res.status(404).json({ message: 'Palinka not found' });
   }
 
-  const [serialized] = await withOwnerAndChatMeta([item], req.userId!, req.userRole!);
+  const [serialized] = await withOwnerAndChatMeta([item], req.userId!, req.userRole!, true);
   return res.json(serialized);
 });
 
@@ -155,17 +236,29 @@ palinkasRouter.post('/', requireAuth, async (req: AuthenticatedRequest, res) => 
   }
 
   const madeDate = parsed.data.madeDate ? new Date(parsed.data.madeDate) : undefined;
+  const status = normalizePalinkaStatus(parsed.data.status);
   const name = buildPalinkaName({
     ...parsed.data,
     madeDate,
   });
+  const actor = await loadHistoryActor(req.userId!);
 
   try {
     const created = await PalinkaModel.create({
       ownerId,
       ...parsed.data,
+      status,
       name,
       madeDate,
+      history: [
+        createPalinkaHistoryEntry({
+          type: 'created',
+          actor,
+          title: 'Tétel létrehozva',
+          description: `Kezdeti állapot: ${getPalinkaStatusLabel(status)}.`,
+          status,
+        }),
+      ],
     });
 
     return res.status(201).json({ id: created._id.toString() });
@@ -186,27 +279,71 @@ palinkasRouter.put('/:id', requireAuth, async (req: AuthenticatedRequest, res) =
   }
 
   const madeDate = parsed.data.madeDate ? new Date(parsed.data.madeDate) : undefined;
+  const status = normalizePalinkaStatus(parsed.data.status);
   const name = buildPalinkaName({
     ...parsed.data,
     madeDate,
   });
+  const current = await PalinkaModel.findOne({ _id: req.params.id, ...manageFilter(req) });
+
+  if (!current) {
+    return res.status(404).json({ message: 'Palinka not found' });
+  }
+
+  const nextValues = {
+    fruitType: parsed.data.fruitType,
+    abvPercent: parsed.data.abvPercent ?? undefined,
+    volumeLiters: parsed.data.volumeLiters,
+    volumeMinLiters: parsed.data.volumeMinLiters ?? undefined,
+    volumeMaxLiters: parsed.data.volumeMaxLiters ?? undefined,
+    containerCapacityLiters: parsed.data.containerCapacityLiters ?? undefined,
+    status,
+    distillationStyle: parsed.data.distillationStyle,
+    madeDate,
+    notes: parsed.data.notes ?? undefined,
+    name,
+  };
+
+  const changedFields = getChangedFields(current.toObject() as Record<string, unknown>, nextValues as Record<string, unknown>);
+
+  if (changedFields.length === 0) {
+    return res.json(serializePalinka(current.toObject(), { includeHistory: true }));
+  }
+
+  const actor = await loadHistoryActor(req.userId!);
+  const nonStatusFields = changedFields.filter((field) => field !== 'status');
+  const previousStatus = normalizePalinkaStatus(current.status);
 
   try {
-    const updated = await PalinkaModel.findOneAndUpdate(
-      { _id: req.params.id, ...manageFilter(req) },
-      {
-        ...parsed.data,
-        name,
-        madeDate,
-      },
-      { new: true, runValidators: true }
-    ).lean();
+    Object.assign(current, nextValues);
 
-    if (!updated) {
-      return res.status(404).json({ message: 'Palinka not found' });
+    if (nonStatusFields.length > 0) {
+      current.history.push(
+        createPalinkaHistoryEntry({
+          type: 'updated',
+          actor,
+          title: 'Tétel módosítva',
+          description: 'A tétel adatai frissítve lettek.',
+          changedFields: nonStatusFields,
+        }) as any
+      );
     }
 
-    return res.json(serializePalinka(updated));
+    if (changedFields.includes('status')) {
+      current.history.push(
+        createPalinkaHistoryEntry({
+          type: 'status_changed',
+          actor,
+          title: 'Állapot módosítva',
+          description: describePalinkaStatusChange(previousStatus, status),
+          status,
+        }) as any
+      );
+    }
+
+    await current.save();
+
+    return res.json(serializePalinka(current.toObject(), { includeHistory: true }));
   } catch (err: any) {
     if (err?.code === 11000) {
       return res.status(409).json({ message: 'Ilyen tétel már létezik.' });

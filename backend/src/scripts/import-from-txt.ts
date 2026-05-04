@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 import { config } from '../config';
+import { createPalinkaHistoryEntry } from '../palinka-history';
 import { UserModel } from '../models/User';
 import { PalinkaModel } from '../models/Palinka';
 import { buildPalinkaName } from '../palinka-name';
@@ -210,6 +211,19 @@ const main = async () => {
         distillationStyle: defaultDistillationStyle,
         madeDate: madeDate ?? undefined,
         notes: vol.raw !== line ? `${vol.raw} | ${line}`.slice(0, 500) : line.slice(0, 500),
+        history: [
+          createPalinkaHistoryEntry({
+            type: 'created',
+            actor: {
+              id: user._id,
+              username: user.username,
+              displayName: user.displayName ?? user.username,
+            },
+            title: 'Tétel létrehozva',
+            description: `Importból létrehozva. Forrás: ${file}.`,
+            status: 'active',
+          }),
+        ],
         sourceFile: file,
         sourceLine: line.slice(0, 500),
       };

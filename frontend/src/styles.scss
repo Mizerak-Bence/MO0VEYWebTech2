@@ -156,6 +156,124 @@ body {
   line-height: 1.55;
 }
 
+.trend-card {
+  margin-bottom: 22px;
+}
+
+.trend-header,
+.trend-legend,
+.trend-summary {
+  display: flex;
+  gap: 12px;
+}
+
+.trend-header {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.trend-legend,
+.trend-summary {
+  flex-wrap: wrap;
+}
+
+.trend-legend-item,
+.trend-summary-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 249, 241, 0.72);
+  border: 1px solid rgba(126, 81, 34, 0.12);
+}
+
+.trend-summary {
+  margin-bottom: 16px;
+}
+
+.trend-summary-card {
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 148px;
+}
+
+.trend-summary-label,
+.trend-values,
+.trend-date-label {
+  color: #7b6b5a;
+  font-size: 0.8rem;
+}
+
+.trend-summary-value,
+.trend-day-label {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.trend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.trend-swatch-inventory,
+.trend-bar-inventory {
+  background: linear-gradient(180deg, rgba(35, 126, 71, 0.88), rgba(35, 126, 71, 0.48));
+}
+
+.trend-swatch-interest,
+.trend-bar-interest {
+  background: linear-gradient(180deg, rgba(166, 95, 19, 0.9), rgba(166, 95, 19, 0.48));
+}
+
+.trend-swatch-closure,
+.trend-bar-closure {
+  background: linear-gradient(180deg, rgba(145, 39, 39, 0.88), rgba(145, 39, 39, 0.48));
+}
+
+.trend-empty,
+.trend-chart {
+  border-radius: 22px;
+  background: rgba(255, 249, 241, 0.72);
+  border: 1px solid rgba(126, 81, 34, 0.12);
+}
+
+.trend-empty {
+  padding: 16px;
+  color: #6b5c4d;
+}
+
+.trend-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.trend-day {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 144px;
+}
+
+.trend-bar {
+  width: min(16px, 30%);
+  min-height: 8px;
+  border-radius: 999px 999px 10px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
 @media (max-width: 820px) {
   .studio-surface {
     padding: 12px;
@@ -167,6 +285,16 @@ body {
 
   .studio-surface__content {
     padding: 14px;
+  }
+
+  .trend-chart {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .trend-header {
+    flex-direction: column;
   }
 }
 /* You can add global styles to this file, and also import other style files */

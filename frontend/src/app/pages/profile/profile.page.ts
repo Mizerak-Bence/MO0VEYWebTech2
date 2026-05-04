@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 import { AuthService } from '../../core/auth.service';
 
@@ -25,6 +26,7 @@ import { AuthService } from '../../core/auth.service';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatToolbarModule,
     DatePipe,
   ],
   templateUrl: './profile.page.html',
@@ -33,6 +35,7 @@ import { AuthService } from '../../core/auth.service';
 export class ProfilePage {
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
 
   readonly user = this.auth.currentUser;
   readonly loading = signal(false);
@@ -126,6 +129,11 @@ export class ProfilePage {
         this.profileSaving.set(false);
       },
     });
+  }
+
+  logout() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
   }
 
   toggleCurrentPassword() {

@@ -39,6 +39,7 @@
           <div class="thread-item-meta">
             {{ thread.isOwnerView ? thread.requester.displayName : thread.owner.displayName }}
           </div>
+          <div class="thread-item-workflow">{{ workflowLabel(thread.status) }}</div>
           <div class="thread-item-status" [class.thread-item-status-unread]="thread.unreadCount > 0">
             {{ threadStatusLabel(thread) }}
           </div>
@@ -50,8 +51,27 @@
 
       <div class="chat-conversation" *ngIf="selectedThread() as thread; else emptyConversation">
         <div class="conversation-title">
-          <div>{{ thread.palinka?.fruitType }} · {{ thread.palinka?.volumeLiters }} L</div>
-          <div class="conversation-owner">Tulajdonos: {{ thread.owner.displayName }}</div>
+          <div>
+            <div>{{ thread.palinka?.fruitType }} · {{ thread.palinka?.volumeLiters }} L</div>
+            <div class="conversation-owner">Tulajdonos: {{ thread.owner.displayName }}</div>
+          </div>
+          <div class="conversation-status-block">
+            <span class="workflow-pill" [class]="'workflow-pill workflow-pill-' + thread.status">{{ workflowLabel(thread.status) }}</span>
+            <div class="conversation-owner">{{ workflowDescription(thread.status) }}</div>
+          </div>
+        </div>
+
+        <div class="workflow-actions" *ngIf="thread.canManageWorkflow">
+          <button
+            mat-stroked-button
+            type="button"
+            class="workflow-action"
+            *ngFor="let option of workflowOptions"
+            [disabled]="updatingStatus() || option.value === thread.status"
+            (click)="updateThreadStatus(option.value)"
+          >
+            {{ option.label }}
+          </button>
         </div>
 
         <div class="message-list">
@@ -63,14 +83,18 @@
         </div>
 
         <div class="message-compose">
+          <div class="compose-note" *ngIf="!canSendMessage(thread)">
+            Ez az érdeklődés jelenleg lezárt. A tulajdonos vagy az admin újra megnyithatja a workflow állapotával.
+          </div>
           <textarea
             matInput
             rows="2"
             [ngModel]="draftMessage()"
             (ngModelChange)="draftMessage.set($event)"
             placeholder="Írj üzenetet..."
+            [disabled]="!canSendMessage(thread)"
           ></textarea>
-          <button mat-flat-button color="primary" type="button" (click)="sendMessage()" [disabled]="sending()">
+          <button mat-flat-button color="primary" type="button" (click)="sendMessage()" [disabled]="sending() || !canSendMessage(thread)">
             Küldés
           </button>
         </div>

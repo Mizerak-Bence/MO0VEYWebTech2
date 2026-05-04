@@ -15,6 +15,18 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
+          <mat-label>Életciklus állapot</mat-label>
+          <mat-select formControlName="status">
+            <mat-option *ngFor="let option of statusOptions" [value]="option.value">{{ option.label }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="form.controls.status.touched && form.controls.status.invalid">
+            Kötelező.
+          </mat-error>
+        </mat-form-field>
+
+        <div class="status-hint-box">{{ selectedStatusHint() }}</div>
+
+        <mat-form-field appearance="outline">
           <mat-label>Alkoholfok (%)</mat-label>
           <input matInput type="number" formControlName="abvPercent" />
           <mat-error *ngIf="form.controls.abvPercent.touched && form.controls.abvPercent.invalid">
@@ -87,6 +99,36 @@
           <button mat-flat-button color="primary" type="submit" [disabled]="loading() || initialLoading()">{{ submitLabel() }}</button>
         </div>
       </form>
+
+      <section class="history-section" *ngIf="isEditMode()">
+        <div class="history-section-header">
+          <h3>Előzmények</h3>
+          <div class="history-section-subtitle">Ki, mikor és mit változtatott ezen a tételen.</div>
+        </div>
+
+        <div class="history-empty" *ngIf="historyEntries().length === 0">
+          Ennél a tételnél még nincs rögzített előzmény.
+        </div>
+
+        <div class="history-list" *ngIf="historyEntries().length > 0">
+          <article class="history-item" *ngFor="let entry of historyEntries()">
+            <div class="history-item-header">
+              <div class="history-item-title">{{ entry.title }}</div>
+              <div class="history-item-time">{{ entry.createdAt | date: 'yyyy-MM-dd HH:mm' }}</div>
+            </div>
+
+            <div class="history-item-actor">
+              {{ entry.actorDisplayName }}<span *ngIf="entry.actorUsername"> (&#64;{{ entry.actorUsername }})</span>
+            </div>
+
+            <div class="history-item-description" *ngIf="entry.description">{{ entry.description }}</div>
+
+            <div class="history-item-fields" *ngIf="entry.changedFields.length > 0">
+              <span class="history-field" *ngFor="let field of entry.changedFields">{{ field }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
     </mat-card-content>
   </mat-card>
 </div>

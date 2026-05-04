@@ -84,8 +84,15 @@
   font-size: 0.82rem;
 }
 
-.thread-item-status {
+.thread-item-workflow {
   margin-top: 6px;
+  color: #5c2f0b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.thread-item-status {
+  margin-top: 4px;
   font-size: 0.76rem;
   font-weight: 700;
   color: #7b6b5a;
@@ -108,8 +115,67 @@
 .conversation-title {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(92, 47, 11, 0.1);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
   font-weight: 700;
   color: #2d1b0f;
+}
+
+.conversation-status-block {
+  text-align: right;
+}
+
+.workflow-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.workflow-pill-new_interest {
+  background: rgba(166, 95, 19, 0.12);
+  color: #8a4e14;
+  border-color: rgba(166, 95, 19, 0.16);
+}
+
+.workflow-pill-contacted {
+  background: rgba(35, 126, 71, 0.12);
+  color: #1f6b3f;
+  border-color: rgba(35, 126, 71, 0.16);
+}
+
+.workflow-pill-negotiating {
+  background: rgba(160, 121, 22, 0.12);
+  color: #7e6213;
+  border-color: rgba(160, 121, 22, 0.16);
+}
+
+.workflow-pill-closed {
+  background: rgba(72, 77, 87, 0.12);
+  color: #525865;
+  border-color: rgba(72, 77, 87, 0.16);
+}
+
+.workflow-pill-rejected {
+  background: rgba(145, 39, 39, 0.12);
+  color: #8c2c2c;
+  border-color: rgba(145, 39, 39, 0.16);
+}
+
+.workflow-actions {
+  padding: 12px 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workflow-action {
+  border-radius: 999px;
 }
 
 .message-list {
@@ -152,6 +218,11 @@
   gap: 10px;
 }
 
+.compose-note {
+  color: #8a4e14;
+  font-size: 0.82rem;
+}
+
 .message-compose textarea {
   width: 100%;
   resize: none;
@@ -183,6 +254,14 @@
   .chat-body {
     grid-template-columns: 1fr;
     grid-template-rows: 180px 1fr;
+  }
+
+  .conversation-title {
+    flex-direction: column;
+  }
+
+  .conversation-status-block {
+    text-align: left;
   }
 
   .thread-list {

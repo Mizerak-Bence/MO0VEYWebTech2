@@ -1,5 +1,6 @@
 import mongoose, { type InferSchemaType } from 'mongoose';
 import { CHAT_THREAD_RETENTION_SECONDS } from '../chat-retention';
+import { chatThreadStatusValues } from '../chat-thread-status';
 
 const chatMessageSchema = new mongoose.Schema(
   {
@@ -15,7 +16,7 @@ const chatThreadSchema = new mongoose.Schema(
     palinkaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Palinka', required: true, index: true },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     requesterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    status: { type: String, enum: ['requested', 'open'], required: true, default: 'requested' },
+    status: { type: String, enum: chatThreadStatusValues, required: true, default: 'new_interest' },
     messages: { type: [chatMessageSchema], default: [] },
     latestMessageAt: { type: Date, required: true, default: Date.now },
     ownerSeenAt: { type: Date, required: false },

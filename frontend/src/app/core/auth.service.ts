@@ -29,6 +29,19 @@ export class AuthService {
     return !!this.token;
   }
 
+  get currentUserRole(): 'user' | 'admin' | null {
+    const currentUser = this.currentUser();
+    if (currentUser) {
+      return currentUser.role;
+    }
+
+    return this.readRoleFromToken();
+  }
+
+  get isAdmin(): boolean {
+    return this.currentUserRole === 'admin';
+  }
+
   login(payload: LoginRequest) {
     return this.http.post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, payload).pipe(
       tap((response) => this.setSession(response))
@@ -102,5 +115,26 @@ export class AuthService {
     this.clearToken();
     this.currentUser.set(null);
     this.authInitialized.set(true);
+  }
+
+  private readRoleFromToken(): 'user' | 'admin' | null {
+    const token = this.token;
+    if (!token) {
+      return null;
+    }
+
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    try {
+      const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const paddedPayload = payload.padEnd(Math.ceil(payload.length / 4) * 4, '=');
+      const decoded = JSON.parse(atob(paddedPayload)) as { role?: 'user' | 'admin' };
+      return decoded.role === 'admin' || decoded.role === 'user' ? decoded.role : null;
+    } catch {
+      return null;
+    }
   }
 }

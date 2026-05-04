@@ -212,6 +212,46 @@ tr.mat-mdc-row:hover {
   font-size: 0.82rem;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.status-pill-active {
+  background: rgba(35, 126, 71, 0.12);
+  color: #1f6b3f;
+  border-color: rgba(35, 126, 71, 0.16);
+}
+
+.status-pill-reserved {
+  background: rgba(166, 95, 19, 0.12);
+  color: #8a4e14;
+  border-color: rgba(166, 95, 19, 0.16);
+}
+
+.status-pill-partial {
+  background: rgba(160, 121, 22, 0.12);
+  color: #7e6213;
+  border-color: rgba(160, 121, 22, 0.16);
+}
+
+.status-pill-exhausted {
+  background: rgba(145, 39, 39, 0.12);
+  color: #8c2c2c;
+  border-color: rgba(145, 39, 39, 0.16);
+}
+
+.status-pill-archived {
+  background: rgba(72, 77, 87, 0.12);
+  color: #525865;
+  border-color: rgba(72, 77, 87, 0.16);
+}
+
 .actions-cell {
   white-space: nowrap;
 }

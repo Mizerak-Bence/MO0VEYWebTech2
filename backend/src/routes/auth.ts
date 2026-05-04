@@ -20,6 +20,7 @@ const serializeUser = (user: any) => ({
   displayName: user.displayName ?? user.username,
   role: user.role,
   isSystemAdmin: !!user.isSystemAdmin,
+  isDisabled: !!user.isDisabled,
   createdAt: user.createdAt,
 });
 
@@ -60,6 +61,10 @@ authRouter.post('/login', async (req, res) => {
   const user = await UserModel.findOne({ username });
   if (!user) {
     return res.status(401).json({ message: 'Invalid username or password' });
+  }
+
+  if (user.isDisabled) {
+    return res.status(403).json({ message: 'Ez a felhasználói fiók le van tiltva.' });
   }
 
   const ok = await bcrypt.compare(password, user.passwordHash);
